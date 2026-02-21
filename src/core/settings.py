@@ -1,8 +1,10 @@
 import os
 from typing import Literal
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+load_dotenv()
 APP_ENV = os.getenv("ENVIRONMENT", "development")
 ENV_FILE = f".env.{APP_ENV}" if APP_ENV else ".env"
 
@@ -18,7 +20,10 @@ class Settings(BaseSettings):
     LOG_RETENTION: str = "10 days"
     LOG_COMPRESSION: str = "gz"
 
+    GEMINI_API_KEY: str
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+
     model_config = SettingsConfigDict(env_file=ENV_FILE, extra="ignore")
 
 
-settings = Settings()
+settings = Settings()  # type: ignore #
