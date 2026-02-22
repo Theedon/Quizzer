@@ -1,14 +1,101 @@
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, cast
 
 from langchain.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.types import Send
 
 from src.agent.llm import MODEL as LLM
 from src.agent.prompts import GENERATE_QUIZ_PROMPT, REVIEW_QUIZ_PROMPT
 from src.agent.schemas import MultipleQuiz, ReviewedQuiz
-from src.agent.state import SubGraphState
+from src.agent.state import GlobalQuizState, SubGraphState
+from src.agent.utils import chunk_pdf_content, ingest_pdf
 from src.core import logger
+
+# ============================================================================
+# MAIN GRAPH
+# ============================================================================
+
+
+async def build_graph() -> CompiledStateGraph:
+    memory = InMemorySaver()
+    builder = StateGraph(GlobalQuizState)
+
+    # Nodes
+    builder.add_node(node="page_ingestor", action=page_ingestor)
+    builder.add_node(node="chunking", action=chunking)
+    builder.add_node(node="subgraph_generator", action=subgraph_generator)
+
+    builder.add_node(node="aggregator", action=aggregator)
+
+    # Edges
+    builder.add_edge(start_key=START, end_key="page_ingestor")
+    builder.add_edge(start_key="page_ingestor", end_key="chunking")
+    builder.add_conditional_edges(source="chunking", path=route_chunks_to_subgraph)
+    builder.add_edge(start_key="subgraph_generator", end_key="aggregator")
+
+    builder.add_edge(start_key="aggregator", end_key=END)
+
+    # Compile graph
+    graph = builder.compile(checkpointer=memory)
+    # graph.get_graph().draw_mermaid_png(output_file_path="graph.png")
+
+    return graph
+
+
+async def page_ingestor(state: GlobalQuizState) -> dict[str, Any]:
+    """
+    Receives raw PDF content and prepares it for crawling/chunking.
+    """
+
+    logger.info("--------🚦 NODE - PAGE INGESTOR--------")
+    pdf_content: list[dict[str, Any]] = ingest_pdf(state.get("pdf_url_or_base64", ""))
+    logger.debug(f"Ingested PDF content length: {len(pdf_content)} pages")
+    # logger.debug(f"Sample of PDF content: {pdf_content[:2]}")
+
+    return {
+        "pdf_pages_data": pdf_content,
+    }
+
+
+async def chunking(state: GlobalQuizState) -> dict[str, Any]:
+    """
+    Breaks down PDF into processable chunks for quiz generation.
+    """
+    logger.info("--------🚦 NODE - CHUNKING--------")
+    chunks = chunk_pdf_content(state.get("pdf_pages_data", []))
+    logger.debug(f"Generated {len(chunks)} chunks from PDF content -< {chunks[:2]}")
+    return {"crawled_chunks": chunks}
+
+
+def route_chunks_to_subgraph(state: GlobalQuizState) -> list[Send]:
+    chunks = state.get("crawled_chunks", [])
+    return [Send("subgraph_generator", {"chunk": chunk}) for chunk in chunks]
+
+
+async def subgraph_generator(state: SubGraphState) -> dict[str, Any]:
+    """
+    Generate quiz from chunk using LLM.
+    """
+    logger.info("--------🚦 NODE - QUIZ GENERATOR--------")
+    subgraph = await build_generator_subgraph()
+    subgraph_state = SubGraphState(
+        chunk=state.get("chunk", {}),
+        quiz=[],
+        iter_count=0,
+        is_quiz_relevant=False,
+    )
+    subgraph_result = await subgraph.ainvoke(subgraph_state)
+    return {"final_quiz": [subgraph_result.get("quiz", [])]}
+
+
+async def aggregator(state: GlobalQuizState) -> dict[str, Any]:
+    logger.info("--------🚦 NODE - AGGREGATOR--------")
+    logger.trace(f"Aggregating quiz results from state: {state.get('final_quiz', [])}")
+    return {"final_quiz": state.get("final_quiz", [])}
+
 
 # ============================================================================
 # SUBGRAPH
