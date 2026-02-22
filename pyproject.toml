@@ -9,8 +9,11 @@ dependencies = [
     "langchain-core>=1.2.14",
     "langchain-google-genai>=4.2.1",
     "langchain-groq>=1.1.2",
+    "langchain-text-splitters>=1.1.1",
+    "langgraph>=1.0.9",
     "loguru>=0.7.3",
     "pydantic-settings>=2.11.0",
+    "pymupdf>=1.27.1",
     "pytest>=9.0.2",
     "python-dotenv>=1.2.1",
 ]
