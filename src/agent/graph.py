@@ -215,3 +215,43 @@ async def should_regenerate_quiz(
         return "regenerate"
     else:
         return "completed"
+
+
+# ============================================================================
+# GRAPH INVOCATION
+# ============================================================================
+
+
+async def graph_ainvoke(
+    pdf_url_or_base64: str = "temp/sample.pdf",
+    thread_id: str = "quizzer-thread",
+) -> GlobalQuizState:
+    initial_state: GlobalQuizState = GlobalQuizState(
+        pdf_url_or_base64=pdf_url_or_base64,
+        pdf_pages_data=[{}],
+        crawled_chunks=[],
+        final_quiz=[],
+    )
+
+    graph = await build_graph()
+    config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+
+    logger.info("--------🚦 graph execution stream started--------")
+    final_state: GlobalQuizState = initial_state
+    async for update in graph.astream(
+        initial_state,
+        config=config,
+        stream_mode="updates",
+    ):
+        summary = {
+            node_name: list(node_update.keys()) if isinstance(node_update, dict) else []
+            for node_name, node_update in update.items()
+        }
+        logger.info(f"Graph Update -  {summary}\n\n")
+        for node_update in update.values():
+            if isinstance(node_update, dict):
+                final_state = cast(GlobalQuizState, {**final_state, **node_update})
+
+    logger.info("--------✅ graph execution stream completed--------")
+
+    return final_state
