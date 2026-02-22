@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "langchain>=1.2.10",
+    "langchain-core>=1.2.14",
     "langchain-google-genai>=4.2.1",
     "langchain-groq>=1.1.2",
     "loguru>=0.7.3",
