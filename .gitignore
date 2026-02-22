@@ -10,3 +10,4 @@ wheels/
 .venv
 logs/
 .env*
+temp/
