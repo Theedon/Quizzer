@@ -1,5 +1,5 @@
 import os
-from typing import Any, Final, Literal, cast
+from typing import Final, Literal, cast
 
 from langchain.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
@@ -11,7 +11,13 @@ from langgraph.types import RetryPolicy, Send
 from src.agent.llm import MODEL as LLM
 from src.agent.prompts import GENERATE_QUIZ_PROMPT, REVIEW_QUIZ_PROMPT
 from src.agent.schemas import MultipleQuiz, ReviewedQuiz
-from src.agent.state import GlobalQuizState, SubGraphState
+from src.agent.state import (
+    ChunkData,
+    FinalQuizItem,
+    GlobalQuizState,
+    PDFPageData,
+    SubGraphState,
+)
 from src.agent.utils import chunk_pdf_content, ingest_pdf
 from src.core import logger
 
@@ -50,13 +56,13 @@ async def build_graph() -> CompiledStateGraph:
     return graph
 
 
-async def page_ingestor(state: GlobalQuizState) -> dict[str, Any]:
+async def page_ingestor(state: GlobalQuizState) -> dict[str, list[PDFPageData]]:
     """
     Receives raw PDF content and prepares it for crawling/chunking.
     """
 
     logger.info("--------🚦 NODE - PAGE INGESTOR--------")
-    pdf_content: list[dict[str, Any]] = ingest_pdf(state.get("pdf_url_or_base64", ""))
+    pdf_content: list[PDFPageData] = ingest_pdf(state.get("pdf_url_or_base64", ""))
     logger.debug(f"Ingested PDF content length: {len(pdf_content)} pages")
     # logger.debug(f"Sample of PDF content: {pdf_content[:2]}")
 
@@ -65,7 +71,7 @@ async def page_ingestor(state: GlobalQuizState) -> dict[str, Any]:
     }
 
 
-async def chunking(state: GlobalQuizState) -> dict[str, Any]:
+async def chunking(state: GlobalQuizState) -> dict[str, list[ChunkData]]:
     """
     Breaks down PDF into processable chunks for quiz generation.
     """
@@ -80,25 +86,25 @@ def route_chunks_to_subgraph(state: GlobalQuizState) -> list[Send]:
     return [Send("subgraph_generator", {"chunk": chunk}) for chunk in chunks]
 
 
-async def subgraph_generator(state: SubGraphState) -> dict[str, Any]:
+async def subgraph_generator(state: SubGraphState) -> dict[str, list[FinalQuizItem]]:
     """
     Generate quiz from chunk using LLM.
     """
     subgraph = await build_generator_subgraph()
     subgraph_state = SubGraphState(
-        chunk=state.get("chunk", {}),
+        chunk=state["chunk"],
         quiz=[],
         iter_count=0,
         is_quiz_relevant=False,
     )
     logger.info(
-        f"firing up subgraph generator for chunk_id: {state.get('chunk', {}).get('chunk_id', 'unknown')}"
+        f"firing up subgraph generator for chunk_id: {state['chunk'].get('chunk_id', 'unknown')}"
     )
     subgraph_result = await subgraph.ainvoke(subgraph_state)
     return {"final_quiz": subgraph_result.get("quiz", [])}
 
 
-async def aggregator(state: GlobalQuizState) -> dict[str, Any]:
+async def aggregator(state: GlobalQuizState) -> dict[str, list[FinalQuizItem]]:
     logger.info("--------🚦 NODE - AGGREGATOR--------")
     logger.trace(f"Aggregating quiz results from state: {state.get('final_quiz', [])}")
     return {"final_quiz": state.get("final_quiz", [])}
@@ -138,12 +144,12 @@ async def build_generator_subgraph() -> CompiledStateGraph:
     return subgraph
 
 
-async def quiz_generator(state: SubGraphState) -> dict[str, Any]:
+async def quiz_generator(state: SubGraphState) -> dict[str, list[FinalQuizItem]]:
     """Generate quiz from chunk using LLM."""
 
     logger.info("*****SUBGRAPH - QUIZ GENERATOR*****")
 
-    chunk_text = state.get("chunk", {}).get("chunk_text", "")
+    chunk_text = state["chunk"].get("chunk_text", "")
     logger.debug(f"Generating quiz for chunk of length: {len(chunk_text)}...")
 
     if not chunk_text or not chunk_text.strip():
@@ -160,54 +166,48 @@ async def quiz_generator(state: SubGraphState) -> dict[str, Any]:
         [HumanMessage(content=generator_prompt)]
     )
     logger.debug(f"Generated quiz response: {generator_response}")
-    quizzes: list[dict[str, Any]] = []
+    quizzes: list[dict[str, object]] = []
     if isinstance(generator_response, MultipleQuiz):
         quizzes = [quiz.model_dump() for quiz in generator_response.quizzes]
     elif isinstance(generator_response, dict):
-        quizzes = generator_response.get("quizzes", [])
+        raw_quizzes = generator_response.get("quizzes", [])
+        if isinstance(raw_quizzes, list):
+            quizzes = [item for item in raw_quizzes if isinstance(item, dict)]
 
-    normalized_quizzes: list[dict[str, Any]] = []
+    normalized_quizzes: list[FinalQuizItem] = []
     for quiz in quizzes:
-        options = quiz.get("options", {}) if isinstance(quiz, dict) else {}
-        answer = (
-            str(quiz.get("answer", "")).strip().upper()
-            if isinstance(quiz, dict)
-            else ""
+        options_raw = quiz.get("options")
+        options = options_raw if isinstance(options_raw, dict) else {}
+
+        answer_raw = str(quiz.get("answer", "")).strip().upper()
+        normalized_answer: Literal["A", "B", "C", "D"] = (
+            cast(Literal["A", "B", "C", "D"], answer_raw)
+            if answer_raw in {"A", "B", "C", "D"}
+            else "A"
         )
-        normalized_quiz = {
-            "question": quiz.get("question", "") if isinstance(quiz, dict) else "",
-            "option_a": quiz.get("option_a")
-            or (options.get("A") if isinstance(options, dict) else ""),
-            "option_b": quiz.get("option_b")
-            or (options.get("B") if isinstance(options, dict) else ""),
-            "option_c": quiz.get("option_c")
-            or (options.get("C") if isinstance(options, dict) else ""),
-            "option_d": quiz.get("option_d")
-            or (options.get("D") if isinstance(options, dict) else ""),
-            "answer": answer if answer in {"A", "B", "C", "D"} else "A",
+
+        normalized_quiz: FinalQuizItem = {
+            "question": str(quiz.get("question", "")),
+            "option_a": str(quiz.get("option_a") or options.get("A") or ""),
+            "option_b": str(quiz.get("option_b") or options.get("B") or ""),
+            "option_c": str(quiz.get("option_c") or options.get("C") or ""),
+            "option_d": str(quiz.get("option_d") or options.get("D") or ""),
+            "answer": normalized_answer,
+            "page_number": state["chunk"].get("page_number", 0),
+            "chunk_id": state["chunk"].get("chunk_id", ""),
         }
         normalized_quizzes.append(normalized_quiz)
 
-    # add page number and chunk id to each quiz object for traceability
-    quizzes = [
-        {
-            **quiz,
-            "page_number": state.get("chunk", {}).get("page_number", 0),
-            "chunk_id": state.get("chunk", {}).get("chunk_id", 0),
-        }
-        for quiz in normalized_quizzes
-    ]
-
     return {
-        "quiz": quizzes,
+        "quiz": normalized_quizzes,
     }
 
 
-async def quiz_reviewer(state: SubGraphState) -> dict[str, Any]:
+async def quiz_reviewer(state: SubGraphState) -> dict[str, int | bool]:
     """Review the generated quiz for relevance and quality, and determine if regeneration is needed."""
 
     logger.info("*****SUBGRAPH - QUIZ REVIEWER*****")
-    chunk_text = state.get("chunk", {}).get("chunk_text", "")
+    chunk_text = state["chunk"].get("chunk_text", "")
     quiz = state.get("quiz", [])
 
     if not quiz:
@@ -267,7 +267,7 @@ async def graph_ainvoke(
 ) -> GlobalQuizState:
     initial_state: GlobalQuizState = GlobalQuizState(
         pdf_url_or_base64=pdf_url_or_base64,
-        pdf_pages_data=[{}],
+        pdf_pages_data=[],
         crawled_chunks=[],
         final_quiz=[],
     )

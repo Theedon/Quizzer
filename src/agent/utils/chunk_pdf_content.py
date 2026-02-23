@@ -1,11 +1,13 @@
 import os
+
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+from src.agent.state import ChunkData, PDFPageData
 from src.core import logger
 
 
-def chunk_pdf_content(pages_data: list[dict]):
+def chunk_pdf_content(pages_data: list[PDFPageData]) -> list[ChunkData]:
     """Split raw page text into smaller graph-compatible chunks.
 
     Returns a list suitable for feeding into the quiz generator nodes.
@@ -25,14 +27,16 @@ def chunk_pdf_content(pages_data: list[dict]):
 
         split_docs = text_splitter.split_documents(docs)
 
-        graph_chunks = []
+        graph_chunks: list[ChunkData] = []
         chunk_num = 0
         for doc in split_docs:
             chunk_id = f"{chunk_num}_{os.urandom(4).hex()}"
+            page_number = doc.metadata.get("page_number", 0)
+            normalized_page_number = page_number if isinstance(page_number, int) else 0
             graph_chunks.append(
                 {
                     "chunk_text": doc.page_content,
-                    "page_number": doc.metadata.get("page_number"),
+                    "page_number": normalized_page_number,
                     "iter_count": 0,
                     "is_quiz_relevant": False,
                     "chunk_id": chunk_id,
@@ -41,6 +45,6 @@ def chunk_pdf_content(pages_data: list[dict]):
             chunk_num += 1
 
         return graph_chunks
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to chunk PDF content")
         raise
