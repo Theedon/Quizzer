@@ -163,7 +163,27 @@ async def quiz_generator(state: SubGraphState) -> dict[str, Any]:
     elif isinstance(generator_response, dict):
         quizzes = generator_response.get("quizzes", [])
 
-    # add page number to each quiz object for traceability
+    normalized_quizzes: list[dict[str, Any]] = []
+    for quiz in quizzes:
+        options = quiz.get("options", {}) if isinstance(quiz, dict) else {}
+        answer = (
+            str(quiz.get("answer", "")).strip().upper()
+            if isinstance(quiz, dict)
+            else ""
+        )
+        normalized_quiz = {
+            "question": quiz.get("question", "") if isinstance(quiz, dict) else "",
+            "option_a": quiz.get("option_a")
+            or (options.get("A") if isinstance(options, dict) else ""),
+            "option_b": quiz.get("option_b")
+            or (options.get("B") if isinstance(options, dict) else ""),
+            "option_c": quiz.get("option_c")
+            or (options.get("C") if isinstance(options, dict) else ""),
+            "option_d": quiz.get("option_d")
+            or (options.get("D") if isinstance(options, dict) else ""),
+            "answer": answer if answer in {"A", "B", "C", "D"} else "A",
+        }
+        normalized_quizzes.append(normalized_quiz)
     quizzes = [
         {**quiz, "page_number": state.get("chunk", {}).get("page_number", 0)}
         for quiz in quizzes

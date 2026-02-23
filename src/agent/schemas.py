@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -10,13 +12,13 @@ class ReviewedQuiz(BaseModel):
 
 class SingleQuiz(BaseModel):
     question: str = Field(..., description="The quiz question")
-    options: dict[str, str] = Field(
+    option_a: str = Field(..., description="Answer option A text")
+    option_b: str = Field(..., description="Answer option B text")
+    option_c: str = Field(..., description="Answer option C text")
+    option_d: str = Field(..., description="Answer option D text")
+    answer: Literal["A", "B", "C", "D"] = Field(
         ...,
-        description="The answer options for the quiz, they should be 4 options with one correct answer and three distractors, in the form {'A': 'option text', 'B': 'option text', 'C': 'option text', 'D': 'option text'}",
-    )
-    answer: str = Field(
-        ...,
-        description="The correct answer option for the quiz e.g. 'A', 'B', 'C', or 'D'",
+        description="The correct answer option label: A, B, C, or D",
     )
 
 

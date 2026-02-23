@@ -20,5 +20,12 @@ The quiz should be clear, concise, and free of ambiguity.
 The quiz should be designed to assess understanding of the key concepts and details in the content. 
 The quiz should be engaging and thought-provoking, encouraging critical thinking and application of the material. 
 The quiz should be appropriate for the intended audience and should be at an appropriate level of difficulty. 
-The quiz should be designed to promote learning and retention of the material, and should be structured in a way that facilitates effective study and review.   
+The quiz should be designed to promote learning and retention of the material, and should be structured in a way that facilitates effective study and review.
+Return a JSON object with key "quizzes" where each quiz has exactly these keys:
+- question
+- option_a
+- option_b
+- option_c
+- option_d
+- answer (must be one of: "A", "B", "C", "D")
 """
