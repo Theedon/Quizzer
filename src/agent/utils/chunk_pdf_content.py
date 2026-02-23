@@ -1,3 +1,4 @@
+import os
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -25,16 +26,19 @@ def chunk_pdf_content(pages_data: list[dict]):
         split_docs = text_splitter.split_documents(docs)
 
         graph_chunks = []
+        chunk_num = 0
         for doc in split_docs:
+            chunk_id = f"{chunk_num}_{os.urandom(4).hex()}"
             graph_chunks.append(
                 {
                     "chunk_text": doc.page_content,
                     "page_number": doc.metadata.get("page_number"),
-                    "draft_quiz": [],
                     "iter_count": 0,
                     "is_quiz_relevant": False,
+                    "chunk_id": chunk_id,
                 }
             )
+            chunk_num += 1
 
         return graph_chunks
     except Exception as e:

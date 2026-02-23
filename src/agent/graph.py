@@ -21,6 +21,7 @@ from src.core import logger
 
 
 async def build_graph() -> CompiledStateGraph:
+
     memory = InMemorySaver()
     builder = StateGraph(GlobalQuizState)
 
@@ -83,13 +84,15 @@ async def subgraph_generator(state: SubGraphState) -> dict[str, Any]:
     """
     Generate quiz from chunk using LLM.
     """
-    logger.info("--------🚦 NODE - QUIZ GENERATOR--------")
     subgraph = await build_generator_subgraph()
     subgraph_state = SubGraphState(
         chunk=state.get("chunk", {}),
         quiz=[],
         iter_count=0,
         is_quiz_relevant=False,
+    )
+    logger.info(
+        f"firing up subgraph generator for chunk_id: {state.get('chunk', {}).get('chunk_id', 'unknown')}"
     )
     subgraph_result = await subgraph.ainvoke(subgraph_state)
     return {"final_quiz": [subgraph_result.get("quiz", [])]}
@@ -184,9 +187,15 @@ async def quiz_generator(state: SubGraphState) -> dict[str, Any]:
             "answer": answer if answer in {"A", "B", "C", "D"} else "A",
         }
         normalized_quizzes.append(normalized_quiz)
+
+    # add page number and chunk id to each quiz object for traceability
     quizzes = [
-        {**quiz, "page_number": state.get("chunk", {}).get("page_number", 0)}
-        for quiz in quizzes
+        {
+            **quiz,
+            "page_number": state.get("chunk", {}).get("page_number", 0),
+            "chunk_id": state.get("chunk", {}).get("chunk_id", 0),
+        }
+        for quiz in normalized_quizzes
     ]
 
     return {
