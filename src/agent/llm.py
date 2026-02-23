@@ -1,5 +1,6 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
 from src.core import logger, settings
@@ -16,12 +17,18 @@ GroqLLM = ChatGroq(
     temperature=1.0,
 )
 
+OpenAILLM = ChatOpenAI(
+    model=settings.OPENAI_MODEL,
+)
+
 
 def get_llm(provider: str = settings.MODEL_PROVIDER):
     if provider == "google":
         return GoogleLLM
     elif provider == "groq":
         return GroqLLM
+    elif provider == "openai":
+        return OpenAILLM
     else:
         raise ValueError(f"Unsupported model provider: {provider}")
 

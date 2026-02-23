@@ -23,7 +23,10 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
-    MODEL_PROVIDER: Literal["google", "groq"] = "groq"
+    OPENAI_API_KEY: str
+    OPENAI_MODEL: str = "gpt-4.1-mini"
+
+    MODEL_PROVIDER: Literal["google", "groq", "openai"] = "openai"
 
     LANGSMITH_API_KEY: str = ""
     LANGSMITH_TRACING: bool = True
