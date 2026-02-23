@@ -1,3 +1,4 @@
+import os
 from typing import Any, Final, Literal, cast
 
 from langchain.messages import HumanMessage
@@ -5,7 +6,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.types import Send
+from langgraph.types import RetryPolicy, Send
 
 from src.agent.llm import MODEL as LLM
 from src.agent.prompts import GENERATE_QUIZ_PROMPT, REVIEW_QUIZ_PROMPT
@@ -26,7 +27,10 @@ async def build_graph() -> CompiledStateGraph:
     # Nodes
     builder.add_node(node="page_ingestor", action=page_ingestor)
     builder.add_node(node="chunking", action=chunking)
-    builder.add_node(node="subgraph_generator", action=subgraph_generator)
+    builder.add_node(
+        node="subgraph_generator",
+        action=subgraph_generator,
+    )
 
     builder.add_node(node="aggregator", action=aggregator)
 
@@ -103,12 +107,18 @@ async def aggregator(state: GlobalQuizState) -> dict[str, Any]:
 
 MAX_SUBGRAPH_ITER: Final = 3
 
+retry_policy = RetryPolicy(jitter=True)
+
 
 async def build_generator_subgraph() -> CompiledStateGraph:
     subgraph_builder = StateGraph(SubGraphState)
 
-    subgraph_builder.add_node(node="quiz_generator", action=quiz_generator)
-    subgraph_builder.add_node(node="quiz_reviewer", action=quiz_reviewer)
+    subgraph_builder.add_node(
+        node="quiz_generator", action=quiz_generator, retry_policy=retry_policy
+    )
+    subgraph_builder.add_node(
+        node="quiz_reviewer", action=quiz_reviewer, retry_policy=retry_policy
+    )
 
     subgraph_builder.add_edge(start_key=START, end_key="quiz_generator")
     subgraph_builder.add_edge(start_key="quiz_generator", end_key="quiz_reviewer")
@@ -224,7 +234,7 @@ async def should_regenerate_quiz(
 
 async def graph_ainvoke(
     pdf_url_or_base64: str = "temp/sample.pdf",
-    thread_id: str = "quizzer-thread",
+    thread_id: str = f"qthread_{os.urandom(8).hex()}",
 ) -> GlobalQuizState:
     initial_state: GlobalQuizState = GlobalQuizState(
         pdf_url_or_base64=pdf_url_or_base64,
@@ -234,7 +244,12 @@ async def graph_ainvoke(
     )
 
     graph = await build_graph()
-    config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+    config: RunnableConfig = {
+        "configurable": {
+            "thread_id": thread_id,
+            "max_concurrency": 3,
+        }
+    }
 
     logger.info("--------🚦 graph execution stream started--------")
     final_state: GlobalQuizState = initial_state
