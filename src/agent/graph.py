@@ -95,7 +95,7 @@ async def subgraph_generator(state: SubGraphState) -> dict[str, Any]:
         f"firing up subgraph generator for chunk_id: {state.get('chunk', {}).get('chunk_id', 'unknown')}"
     )
     subgraph_result = await subgraph.ainvoke(subgraph_state)
-    return {"final_quiz": [subgraph_result.get("quiz", [])]}
+    return {"final_quiz": subgraph_result.get("quiz", [])}
 
 
 async def aggregator(state: GlobalQuizState) -> dict[str, Any]:
