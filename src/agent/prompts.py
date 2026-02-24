@@ -28,4 +28,5 @@ Return a JSON object with key "quizzes" where each quiz has exactly these keys:
 - option_c
 - option_d
 - answer (must be one of: "A", "B", "C", "D")
+- explanation (short reason why the correct answer is correct; use "N/A" if unavailable)
 """

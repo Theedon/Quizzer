@@ -22,6 +22,7 @@ class FinalQuizItem(TypedDict):
     option_c: str
     option_d: str
     answer: Literal["A", "B", "C", "D"]
+    explanation: str
     page_number: int
     chunk_id: str
 

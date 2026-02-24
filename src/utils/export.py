@@ -42,6 +42,7 @@ def export_quizzes_to_csv(
                     "Option C",
                     "Option D",
                     "Correct Answer",
+                    "Explanation",
                 ]
             )
 
@@ -56,6 +57,7 @@ def export_quizzes_to_csv(
                         _get_quiz_field(quiz, "option_c"),
                         _get_quiz_field(quiz, "option_d"),
                         _get_quiz_field(quiz, "answer"),
+                        _get_quiz_field(quiz, "explanation", "N/A"),
                     ]
                 )
 

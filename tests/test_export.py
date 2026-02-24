@@ -22,5 +22,8 @@ def test_export_quizzes_to_csv_with_dict_rows(tmp_path: Path) -> None:
     assert output_path.exists()
 
     csv_content = output_path.read_text(encoding="utf-8")
-    assert "Question,Option A,Option B,Option C,Option D,Correct Answer" in csv_content
+    assert (
+        "Question,Option A,Option B,Option C,Option D,Correct Answer,Explanation"
+        in csv_content
+    )
     assert "What is 2 + 2?,3,4,5,6,B,N/A" in csv_content

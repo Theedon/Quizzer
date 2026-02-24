@@ -178,6 +178,7 @@ async def quiz_generator(state: SubGraphState) -> dict[str, list[FinalQuizItem]]
     for quiz in quizzes:
         options_raw = quiz.get("options")
         options = options_raw if isinstance(options_raw, dict) else {}
+        explanation_raw = str(quiz.get("explanation", "")).strip()
 
         answer_raw = str(quiz.get("answer", "")).strip().upper()
         normalized_answer: Literal["A", "B", "C", "D"] = (
@@ -193,6 +194,7 @@ async def quiz_generator(state: SubGraphState) -> dict[str, list[FinalQuizItem]]
             "option_c": str(quiz.get("option_c") or options.get("C") or ""),
             "option_d": str(quiz.get("option_d") or options.get("D") or ""),
             "answer": normalized_answer,
+            "explanation": explanation_raw if explanation_raw else "N/A",
             "page_number": state["chunk"].get("page_number", 0),
             "chunk_id": state["chunk"].get("chunk_id", ""),
         }

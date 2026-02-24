@@ -20,6 +20,10 @@ class SingleQuiz(BaseModel):
         ...,
         description="The correct answer option label: A, B, C, or D",
     )
+    explanation: str = Field(
+        "N/A",
+        description="Short explanation for why the correct answer is right",
+    )
 
 
 class MultipleQuiz(BaseModel):

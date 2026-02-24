@@ -14,6 +14,7 @@ def test_single_quiz_schema_has_explicit_option_fields() -> None:
         "option_c",
         "option_d",
         "answer",
+        "explanation",
     }
     assert set(schema["required"]) == {
         "question",
