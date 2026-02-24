@@ -33,6 +33,8 @@ class Settings(BaseSettings):
     LANGSMITH_PROJECT: str = "quizzer"
     LANGSMITH_ENDPOINT: str = "https://api.smith.langchain.com"
 
+    GEN_CONCURRENCY: int = 5
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

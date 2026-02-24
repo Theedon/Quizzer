@@ -276,7 +276,7 @@ async def graph_ainvoke(
     config: RunnableConfig = {
         "configurable": {
             "thread_id": thread_id,
-            "max_concurrency": 3,
+            "max_concurrency": settings.GEN_CONCURRENCY,
         }
     }
 
