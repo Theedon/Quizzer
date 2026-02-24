@@ -3,8 +3,8 @@ import os
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from src.agent.state import ChunkData, PDFPageData
-from src.core import logger
+from ...core import logger
+from ..state import ChunkData, PDFPageData
 
 
 def chunk_pdf_content(pages_data: list[PDFPageData]) -> list[ChunkData]:

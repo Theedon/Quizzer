@@ -3,7 +3,7 @@ from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
-from src.core import logger, settings
+from ..core import logger, settings
 
 GoogleLLM = ChatGoogleGenerativeAI(
     model=settings.GEMINI_MODEL,

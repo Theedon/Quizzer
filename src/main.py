@@ -2,9 +2,9 @@ import asyncio
 
 from dotenv import load_dotenv
 
-from src.agent.graph import graph_ainvoke
-from src.core import configure_logging, logger
-from src.utils.export import export_quizzes_to_csv
+from .agent.graph import graph_ainvoke
+from .core import configure_logging, logger
+from .utils.export import export_quizzes_to_csv
 
 load_dotenv()
 

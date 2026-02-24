@@ -3,7 +3,7 @@ from pathlib import Path
 
 from loguru import logger as _logger
 
-from src.core.settings import settings
+from .settings import settings
 
 logger = _logger
 _configured = False
