@@ -8,18 +8,18 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import RetryPolicy, Send
 
-from src.agent.llm import MODEL as LLM
-from src.agent.prompts import GENERATE_QUIZ_PROMPT, REVIEW_QUIZ_PROMPT
-from src.agent.schemas import MultipleQuiz, ReviewedQuiz
-from src.agent.state import (
+from ..core import logger, settings
+from .llm import MODEL as LLM
+from .prompts import GENERATE_QUIZ_PROMPT, REVIEW_QUIZ_PROMPT
+from .schemas import MultipleQuiz, ReviewedQuiz
+from .state import (
     ChunkData,
     FinalQuizItem,
     GlobalQuizState,
     PDFPageData,
     SubGraphState,
 )
-from src.agent.utils import chunk_pdf_content, ingest_pdf
-from src.core import logger
+from .utils import chunk_pdf_content, ingest_pdf
 
 # ============================================================================
 # MAIN GRAPH

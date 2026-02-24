@@ -3,8 +3,8 @@ from io import BytesIO
 
 import pymupdf
 
-from src.agent.state import PDFPageData
-from src.core import logger
+from ...core import logger
+from ..state import PDFPageData
 
 
 def ingest_pdf(pdf_path_or_base64: str) -> list[PDFPageData]:

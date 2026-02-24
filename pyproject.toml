@@ -17,3 +17,10 @@ dependencies = [
     "pytest>=9.0.2",
     "python-dotenv>=1.2.1",
 ]
+
+[project.scripts]
+quizzer = "src.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]

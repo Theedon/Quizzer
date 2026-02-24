@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from typing import Any
 
-from src.core.logger import logger
+from ..core.logger import logger
 
 
 def export_quizzes_to_csv(
