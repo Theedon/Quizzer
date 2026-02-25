@@ -2,9 +2,11 @@
 
 An entirely asynchronous, Map-Reduce LangGraph architecture that ingests heavy textbooks and parallelizes LLM quiz generation without context loss.
 
+### Graph Architecture
+
 ![Architecture Diagram](docs/architecture.png)
 
-## The Origin: Why I Built This
+## Why I Built This
 
 **The Product Problem:** In Nigeria, secondary school teachers and EdTech platforms (like the one I co-founded at [JAMB Prep](https://jambprepacademy.com)) spend countless hours manually reading through massive, 300+ page textbooks just to extract and format exam questions. I needed a way to completely automate this process and export it directly into a format ready for a Learning Management System (LMS).
 
@@ -97,3 +99,7 @@ src/
 ```bash
 uv run pytest
 ```
+
+## License
+
+MIT
