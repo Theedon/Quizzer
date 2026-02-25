@@ -47,7 +47,6 @@ def export_quizzes_to_csv(
             )
 
             # Write data
-            logger.warning(f"Exporting --------{(final_quizzes)} quizzes ----")
             for quiz in final_quizzes:
                 writer.writerow(
                     [

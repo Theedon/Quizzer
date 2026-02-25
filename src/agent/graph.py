@@ -6,7 +6,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.types import RetryPolicy, Send
+from langgraph.types import RetryPolicy, Send, StateSnapshot
 
 from ..core import logger, settings
 from .llm import MODEL as LLM
@@ -266,7 +266,7 @@ async def should_regenerate_quiz(
 async def graph_ainvoke(
     pdf_url_or_base64: str = "temp/sample.pdf",
     thread_id: str = f"qthread_{os.urandom(8).hex()}",
-) -> GlobalQuizState:
+) -> GlobalQuizState | StateSnapshot:
     initial_state: GlobalQuizState = GlobalQuizState(
         pdf_url_or_base64=pdf_url_or_base64,
         pdf_pages_data=[],
@@ -283,7 +283,6 @@ async def graph_ainvoke(
     }
 
     logger.info("--------🚦 graph execution stream started--------")
-    final_state: GlobalQuizState = initial_state
     async for update in graph.astream(
         initial_state,
         config=config,
@@ -294,9 +293,8 @@ async def graph_ainvoke(
             for node_name, node_update in update.items()
         }
         logger.info(f"Graph Update -  {summary}\n\n")
-        for node_update in update.values():
-            if isinstance(node_update, dict):
-                final_state = cast(GlobalQuizState, {**final_state, **node_update})
+
+    final_state = await graph.aget_state(config=config)
 
     logger.info("--------✅ graph execution stream completed--------")
 
