@@ -14,6 +14,9 @@ uv sync
 uv run -m src.main --input docs/sample_textbook.pdf
 uv run -m src.main --input <pdf> --output <csv>          # custom output path
 
+# Run the GUI (NiceGUI on http://localhost:8080)
+uv run -m src.ui.app
+
 # Tests
 uv run pytest                                            # full suite
 uv run pytest tests/test_export.py                       # single file
@@ -23,7 +26,7 @@ uv run pytest tests/test_export.py::test_name -v         # single test
 uv run -m src.agent.llm
 ```
 
-The CLI entry point is registered as `quizzer` (`src.main:cli`) in `pyproject.toml`.
+Script entry points are declared in `pyproject.toml` (`quizzer` → `src.main:cli`, `quizzer-ui` → `src.ui.app:main`), but `tool.uv.package` is not set, so `uv run quizzer` is currently skipped — use the `-m` forms above. Tests run under `pytest-asyncio` with `asyncio_mode = "auto"`, so `async def test_*` functions are picked up automatically without a `@pytest.mark.asyncio` marker.
 
 ## Configuration
 
@@ -63,6 +66,15 @@ LLMs return structured output via `get_llm().with_structured_output(MultipleQuiz
 - `src/agent/utils/chunk_pdf_content.py` — `RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)`. Each chunk gets a random `chunk_id` (`{n}_{hex}`) and carries its source `page_number` forward into every quiz item.
 - `src/agent/llm.py` — `get_llm(provider=None)` builds a fresh client on every call from the latest `settings`. There is no module-level LLM singleton, and only the active provider is instantiated, so a runtime mutation of `settings.MODEL_PROVIDER` (or `*_MODEL`) takes effect on the next call.
 - `src/utils/export.py::export_quizzes_to_csv` — writes the LMS-ready CSV (Question / Option A–D / Correct Answer / Explanation). Defaults to `outputs/quiz_export_<timestamp>.csv` when no custom path is given.
+
+### GUI (`src/ui/`)
+
+A NiceGUI frontend that wraps the same pipeline. Two files matter:
+
+- `src/ui/runner.py::run_generation(pdf_path, on_progress)` — translates LangGraph node updates into a `GenerationProgress` dataclass (`phase`, `total_pages`, `total_chunks`, `chunks_done`, `quizzes`). It calls `graph_ainvoke(..., on_update=...)` and pushes a fresh snapshot to `on_progress` on every update. `on_progress` may be sync or async — the runner awaits if needed.
+- `src/ui/app.py` — single `@ui.page("/")` route. All click handlers must be passed as direct references (e.g. `on_click=on_generate`), **not** wrapped in `asyncio.create_task(...)` — that detaches the coroutine from NiceGUI's per-slot context and makes later `ui.notify` / `*.refresh()` calls raise "slot stack is empty". Per-client state is a plain `dict` defined inside the page function.
+
+The UI mutates `settings` in-place to switch provider/model before each generation — this is the intended use of the lazy `get_llm()`.
 
 ## Repository conventions
 
