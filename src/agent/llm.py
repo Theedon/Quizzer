@@ -1,5 +1,4 @@
-from typing import Any
-
+from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
@@ -8,7 +7,7 @@ from pydantic import SecretStr
 from ..core import logger, settings
 
 
-def get_llm(provider: str | None = None) -> Any:
+def get_llm(provider: str | None = None) -> BaseChatModel:
     """Build the LLM client for the active (or given) provider.
 
     Reads the latest settings on every call so a runtime provider/model
