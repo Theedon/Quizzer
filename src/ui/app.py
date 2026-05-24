@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -58,6 +59,8 @@ def index() -> None:
         "provider": settings.MODEL_PROVIDER,
         "model": _model_for(settings.MODEL_PROVIDER),
         "concurrency": settings.GEN_CONCURRENCY,
+        "page": 0,
+        "page_size": 10,
     }
 
     # ============================================================
@@ -102,8 +105,32 @@ def index() -> None:
             ).classes("text-xs opacity-60")
             return
 
-        for idx, quiz in enumerate(quizzes):
+        page = state["page"]
+        page_size = state["page_size"]
+        start = page * page_size
+        end = start + page_size
+
+        for idx, quiz in enumerate(quizzes[start:end], start=start):
             _quiz_card(idx, quiz)
+
+        if len(quizzes) > page_size:
+            total_pages = math.ceil(len(quizzes) / page_size)
+            with ui.row().classes("w-full items-center justify-center gap-4 mt-2"):
+                ui.button(
+                    icon="chevron_left",
+                    on_click=lambda: (state.update(page=state["page"] - 1), cards_view.refresh()),
+                ).props("flat dense round color=primary").bind_enabled_from(
+                    state, "page", backward=lambda p: p > 0
+                )
+                ui.label(f"Page {page + 1} / {total_pages}").classes(
+                    "text-xs opacity-70"
+                )
+                ui.button(
+                    icon="chevron_right",
+                    on_click=lambda: (state.update(page=state["page"] + 1), cards_view.refresh()),
+                ).props("flat dense round color=primary").bind_enabled_from(
+                    state, "page", backward=lambda p: p < total_pages - 1
+                )
 
     def _quiz_card(idx: int, quiz: dict) -> None:
         with ui.card().classes("w-full p-4 gap-2"):
@@ -183,6 +210,7 @@ def index() -> None:
         def push(snapshot: GenerationProgress) -> None:
             state["progress"] = snapshot
             state["quizzes"] = [dict(q) for q in snapshot.quizzes]
+            state["page"] = 0
             progress_view.refresh()
             cards_view.refresh()
 
@@ -224,6 +252,8 @@ def index() -> None:
     def delete_quiz(idx: int) -> None:
         if 0 <= idx < len(state["quizzes"]):
             del state["quizzes"][idx]
+            total_pages = max(1, math.ceil(len(state["quizzes"]) / state["page_size"]))
+            state["page"] = min(state["page"], total_pages - 1)
             cards_view.refresh()
 
     def reset_all() -> None:
@@ -236,6 +266,7 @@ def index() -> None:
             Path(state["pdf_path"]).unlink(missing_ok=True)
         state["pdf_path"] = None
         state["pdf_name"] = None
+        state["page"] = 0
         state["quizzes"] = []
         state["progress"] = GenerationProgress()
         upload_status.set_text("No file selected")
