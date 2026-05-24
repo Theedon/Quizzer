@@ -17,13 +17,13 @@ class Settings(BaseSettings):
     LOG_RETENTION: str = "10 days"
     LOG_COMPRESSION: str = "gz"
 
-    GEMINI_API_KEY: str
+    GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
-    GROQ_API_KEY: str
+    GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
 
-    OPENAI_API_KEY: str
+    OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4.1-mini"
 
     MODEL_PROVIDER: Literal["google", "groq", "openai"] = "openai"
