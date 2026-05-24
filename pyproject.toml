@@ -12,15 +12,21 @@ dependencies = [
     "langchain-text-splitters>=1.1.1",
     "langgraph>=1.0.9",
     "loguru>=0.7.3",
+    "nicegui>=2.0",
     "pydantic-settings>=2.11.0",
     "pymupdf>=1.27.1",
     "pytest>=9.0.2",
+    "pytest-asyncio>=0.24",
     "python-dotenv>=1.2.1",
 ]
 
 [project.scripts]
 quizzer = "src.main:cli"
+quizzer-ui = "src.ui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

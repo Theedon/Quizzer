@@ -43,6 +43,7 @@ Using Gemini 2.5 Flash Lite and max_concurrency=5, the Map-Reduce pipeline succe
 | **Orchestration** | LangGraph (async state graphs + subgraphs) |
 | **Validation**    | Pydantic                                   |
 | **Logging**       | Loguru                                     |
+| **GUI**           | NiceGUI (async, Quasar-based)              |
 | **Package Mgmt**  | uv                                         |
 
 ## Quickstart
@@ -77,6 +78,17 @@ OPENAI_API_KEY=sk-*** uvx https://github.com/Theedon/Quizzer.git --input docs/sa
 
 ```
 
+### 4. Or run the GUI
+
+A small, async NiceGUI frontend that exposes the same pipeline: drop a PDF, watch live progress, edit the generated questions inline, and download the CSV. Dark mode is on by default with a one-click toggle, and the LLM provider/model can be switched from the sidebar.
+
+```bash
+uv run -m src.ui.app
+# then open http://localhost:8080
+```
+
+![Quizzer GUI](docs/ui_dark.png)
+
 ## Project Structure
 
 ```text
@@ -87,6 +99,9 @@ src/
 ├── core/
 │   ├── settings.py          # Pydantic-based config (reads .env)
 │   └── logger.py            # Loguru setup
+├── ui/
+│   ├── app.py               # NiceGUI page (theme, sidebar, upload, cards, download)
+│   └── runner.py            # Bridges graph_ainvoke updates → live UI progress
 └── agent/
     ├── graph.py             # Main graph + Map-Reduce subgraph
     ├── state.py             # TypedDict state definitions

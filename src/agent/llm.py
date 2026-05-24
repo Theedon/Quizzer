@@ -1,3 +1,4 @@
+from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
@@ -5,35 +6,33 @@ from pydantic import SecretStr
 
 from ..core import logger, settings
 
-GoogleLLM = ChatGoogleGenerativeAI(
-    model=settings.GEMINI_MODEL,
-    api_key=SecretStr(settings.GEMINI_API_KEY),
-    temperature=1.0,
-)
 
-GroqLLM = ChatGroq(
-    model=settings.GROQ_MODEL,
-    api_key=SecretStr(settings.GROQ_API_KEY),
-    temperature=1.0,
-)
+def get_llm(provider: str | None = None) -> BaseChatModel:
+    """Build the LLM client for the active (or given) provider.
 
-OpenAILLM = ChatOpenAI(
-    model=settings.OPENAI_MODEL,
-)
+    Reads the latest settings on every call so a runtime provider/model
+    switch (e.g. from the UI sidebar) takes effect on the next invocation.
+    """
+    chosen = provider or settings.MODEL_PROVIDER
 
-
-def get_llm(provider: str = settings.MODEL_PROVIDER):
-    if provider == "google":
-        return GoogleLLM
-    elif provider == "groq":
-        return GroqLLM
-    elif provider == "openai":
-        return OpenAILLM
-    else:
-        raise ValueError(f"Unsupported model provider: {provider}")
-
-
-LLM = MODEL = get_llm()
+    if chosen == "google":
+        return ChatGoogleGenerativeAI(
+            model=settings.GEMINI_MODEL,
+            api_key=SecretStr(settings.GEMINI_API_KEY),
+            temperature=1.0,
+        )
+    if chosen == "groq":
+        return ChatGroq(
+            model=settings.GROQ_MODEL,
+            api_key=SecretStr(settings.GROQ_API_KEY),
+            temperature=1.0,
+        )
+    if chosen == "openai":
+        return ChatOpenAI(
+            model=settings.OPENAI_MODEL,
+            api_key=SecretStr(settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else None,
+        )
+    raise ValueError(f"Unsupported model provider: {chosen}")
 
 
 def main() -> None:
