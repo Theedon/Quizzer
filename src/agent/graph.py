@@ -104,10 +104,10 @@ async def subgraph_generator(state: SubGraphState) -> dict[str, list[FinalQuizIt
     return {"final_quiz": subgraph_result.get("quiz", [])}
 
 
-async def aggregator(state: GlobalQuizState) -> dict[str, list[FinalQuizItem]]:
+async def aggregator(state: GlobalQuizState) -> dict:
     logger.info("--------🚦 NODE - AGGREGATOR--------")
-    logger.trace(f"Aggregating quiz results from state: {state.get('final_quiz', [])}")
-    return {"final_quiz": state.get("final_quiz", [])}
+    logger.debug(f"Aggregated {len(state.get('final_quiz', []))} quiz items total")
+    return {}
 
 
 # ============================================================================
