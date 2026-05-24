@@ -216,7 +216,10 @@ def index() -> None:
         if not path:
             ui.notify("Export failed — check logs", type="negative")
             return
-        ui.download(path, filename=Path(path).name)
+        try:
+            ui.download(path, filename=Path(path).name)
+        finally:
+            Path(path).unlink(missing_ok=True)
 
     def delete_quiz(idx: int) -> None:
         if 0 <= idx < len(state["quizzes"]):
@@ -229,6 +232,8 @@ def index() -> None:
                 "Generation in progress — wait for it to finish", type="warning"
             )
             return
+        if state["pdf_path"]:
+            Path(state["pdf_path"]).unlink(missing_ok=True)
         state["pdf_path"] = None
         state["pdf_name"] = None
         state["quizzes"] = []
@@ -240,6 +245,10 @@ def index() -> None:
         cards_view.refresh()
 
     async def on_upload(e: events.UploadEventArguments) -> None:
+        old_path = state["pdf_path"]
+        if old_path:
+            Path(old_path).unlink(missing_ok=True)
+
         filename = e.file.name
         suffix = Path(filename).suffix or ".pdf"
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
