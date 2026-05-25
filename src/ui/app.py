@@ -72,14 +72,28 @@ def index() -> None:
         p: GenerationProgress = state["progress"]
         with ui.card().classes("w-full p-4"):
             ui.label(_phase_label(p)).classes("text-sm font-semibold text-primary")
-            ui.linear_progress(value=p.fraction, show_value=False).props(
-                "color=primary rounded"
-            ).classes("w-full")
-            detail = (
-                f"pages {p.total_pages} · "
-                f"chunks {p.chunks_done}/{p.total_chunks or '?'} · "
-                f"questions {len(p.quizzes)}"
-            )
+
+            if p.phase in ("ingesting", "chunking"):
+                ui.linear_progress(show_value=False).props(
+                    "indeterminate color=primary rounded"
+                ).classes("w-full")
+            else:
+                ui.linear_progress(value=p.fraction, show_value=False).props(
+                    "color=primary rounded"
+                ).classes("w-full")
+
+            if p.phase == "idle":
+                detail = "Ready"
+            elif p.phase == "ingesting":
+                detail = "Reading PDF…"
+            elif p.phase == "chunking":
+                detail = f"pages {p.total_pages} · Splitting into chunks…"
+            else:
+                detail = (
+                    f"pages {p.total_pages} · "
+                    f"chunks {p.chunks_done}/{p.total_chunks or '?'} · "
+                    f"questions {len(p.quizzes)}"
+                )
             ui.label(detail).classes("text-xs opacity-70")
             if p.phase == "error" and p.error:
                 ui.label(f"Error: {p.error}").classes("text-xs text-negative")
