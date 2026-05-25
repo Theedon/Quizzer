@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Literal
 
@@ -36,11 +37,15 @@ OnProgress = Callable[[GenerationProgress], Awaitable[None] | None]
 async def run_generation(
     pdf_path: str,
     on_progress: OnProgress,
+    cancel_event: asyncio.Event | None = None,
 ) -> list[FinalQuizItem]:
     progress = GenerationProgress(phase="ingesting")
     await _emit(on_progress, progress)
 
+    cancelled = False
+
     async def on_update(update: dict) -> None:
+        nonlocal cancelled
         for node_name, node_update in update.items():
             if not isinstance(node_update, dict):
                 continue
@@ -66,10 +71,14 @@ async def run_generation(
 
         await _emit(on_progress, progress)
 
+        if cancel_event is not None and cancel_event.is_set():
+            cancelled = True
+
     try:
         result = await graph_ainvoke(
             pdf_url_or_base64=pdf_path,
             on_update=on_update,
+            cancel_event=cancel_event,
         )
     except Exception as exc:
         logger.exception("Generation failed")
@@ -77,6 +86,12 @@ async def run_generation(
         progress.error = str(exc)
         await _emit(on_progress, progress)
         raise
+
+    if cancelled:
+        logger.info("Generation cancelled by user")
+        progress.phase = "done"
+        await _emit(on_progress, progress)
+        return list(progress.quizzes)
 
     state_values = result.values if isinstance(result, StateSnapshot) else result
     final_quiz: list[FinalQuizItem] = list(state_values.get("final_quiz", []) or [])

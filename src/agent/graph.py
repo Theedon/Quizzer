@@ -1,3 +1,4 @@
+import asyncio
 import os
 from typing import Awaitable, Callable, Final, Literal, cast
 
@@ -267,6 +268,7 @@ async def graph_ainvoke(
     pdf_url_or_base64: str = "temp/sample.pdf",
     thread_id: str = f"qthread_{os.urandom(8).hex()}",
     on_update: Callable[[dict], Awaitable[None]] | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> GlobalQuizState | StateSnapshot:
     initial_state: GlobalQuizState = GlobalQuizState(
         pdf_url_or_base64=pdf_url_or_base64,
@@ -296,6 +298,10 @@ async def graph_ainvoke(
         logger.info(f"Graph Update -  {summary}\n\n")
         if on_update is not None:
             await on_update(update)
+
+        if cancel_event is not None and cancel_event.is_set():
+            logger.info("Graph execution cancelled by user")
+            break
 
     final_state = await graph.aget_state(config=config)
 

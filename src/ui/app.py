@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import math
 import tempfile
 from pathlib import Path
@@ -61,6 +62,7 @@ def index() -> None:
         "concurrency": settings.GEN_CONCURRENCY,
         "page": 0,
         "page_size": 10,
+        "cancel_event": None,
     }
 
     # ============================================================
@@ -203,9 +205,11 @@ def index() -> None:
         state["running"] = True
         state["quizzes"] = []
         state["progress"] = GenerationProgress(phase="ingesting")
+        state["cancel_event"] = asyncio.Event()
         generate_btn.disable()
         progress_view.refresh()
         cards_view.refresh()
+        action_buttons.refresh()
 
         def push(snapshot: GenerationProgress) -> None:
             state["progress"] = snapshot
@@ -215,19 +219,31 @@ def index() -> None:
             cards_view.refresh()
 
         try:
-            await run_generation(state["pdf_path"], push)
-            ui.notify(
-                f"Generated {len(state['quizzes'])} questions",
-                type="positive",
+            await run_generation(
+                state["pdf_path"],
+                push,
+                cancel_event=state["cancel_event"],
             )
+            if state["cancel_event"] and state["cancel_event"].is_set():
+                ui.notify(
+                    f"Cancelled — kept {len(state['quizzes'])} questions",
+                    type="warning",
+                )
+            else:
+                ui.notify(
+                    f"Generated {len(state['quizzes'])} questions",
+                    type="positive",
+                )
         except Exception as exc:
             logger.exception("UI generation failed")
             ui.notify(f"Generation failed: {exc}", type="negative")
         finally:
             state["running"] = False
+            state["cancel_event"] = None
             generate_btn.enable()
             progress_view.refresh()
             cards_view.refresh()
+            action_buttons.refresh()
 
     def on_download() -> None:
         quizzes = state["quizzes"]
@@ -387,20 +403,31 @@ def index() -> None:
                     "text-xs opacity-50"
                 )
 
-            # --- generate / reset ---
-            with ui.row().classes("w-full gap-2"):
-                generate_btn = ui.button(
-                    "Generate Quiz",
-                    icon="play_arrow",
-                    on_click=on_generate,
-                ).props("color=primary unelevated")
-                generate_btn.disable()
+            # --- generate / reset / cancel ---
+            @ui.refreshable
+            def action_buttons() -> None:
+                with ui.row().classes("w-full gap-2"):
+                    if state["running"] and state["cancel_event"]:
+                        ui.button(
+                            "Cancel",
+                            icon="cancel",
+                            on_click=lambda: state["cancel_event"].set(),
+                        ).props("color=red unelevated")
+                    else:
+                        ui.button(
+                            "Reset",
+                            icon="refresh",
+                            on_click=reset_all,
+                        ).props("flat color=primary")
 
-                ui.button(
-                    "Reset",
-                    icon="refresh",
-                    on_click=reset_all,
-                ).props("flat color=primary")
+            generate_btn = ui.button(
+                "Generate Quiz",
+                icon="play_arrow",
+                on_click=on_generate,
+            ).props("color=primary unelevated")
+            generate_btn.disable()
+
+            action_buttons()
 
             # --- progress ---
             progress_view()
