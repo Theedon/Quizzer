@@ -26,7 +26,7 @@ from .utils import chunk_pdf_content, ingest_pdf
 # ============================================================================
 
 
-async def build_graph() -> CompiledStateGraph:
+def build_graph() -> CompiledStateGraph:
 
     memory = InMemorySaver()
     builder = StateGraph(GlobalQuizState)
@@ -54,6 +54,16 @@ async def build_graph() -> CompiledStateGraph:
     # graph.get_graph().draw_mermaid_png(output_file_path="graph.png")
 
     return graph
+
+
+_cached_graph: CompiledStateGraph | None = None
+
+
+def _get_graph() -> CompiledStateGraph:
+    global _cached_graph
+    if _cached_graph is None:
+        _cached_graph = build_graph()
+    return _cached_graph
 
 
 async def page_ingestor(state: GlobalQuizState) -> dict[str, list[PDFPageData]]:
@@ -90,7 +100,7 @@ async def subgraph_generator(state: SubGraphState) -> dict[str, list[FinalQuizIt
     """
     Generate quiz from chunk using LLM.
     """
-    subgraph = await build_generator_subgraph()
+    subgraph = _get_subgraph()
     subgraph_state = SubGraphState(
         chunk=state["chunk"],
         quiz=[],
@@ -119,7 +129,7 @@ MAX_SUBGRAPH_ITER: Final = 3
 retry_policy = RetryPolicy(jitter=True)
 
 
-async def build_generator_subgraph() -> CompiledStateGraph:
+def build_generator_subgraph() -> CompiledStateGraph:
     subgraph_builder = StateGraph(SubGraphState)
 
     subgraph_builder.add_node(
@@ -142,6 +152,16 @@ async def build_generator_subgraph() -> CompiledStateGraph:
 
     subgraph = subgraph_builder.compile()
     return subgraph
+
+
+_cached_subgraph: CompiledStateGraph | None = None
+
+
+def _get_subgraph() -> CompiledStateGraph:
+    global _cached_subgraph
+    if _cached_subgraph is None:
+        _cached_subgraph = build_generator_subgraph()
+    return _cached_subgraph
 
 
 async def quiz_generator(state: SubGraphState) -> dict[str, list[FinalQuizItem]]:
@@ -265,9 +285,12 @@ async def should_regenerate_quiz(
 
 async def graph_ainvoke(
     pdf_url_or_base64: str = "temp/sample.pdf",
-    thread_id: str = f"qthread_{os.urandom(8).hex()}",
+    thread_id: str | None = None,
     on_update: Callable[[dict], Awaitable[None]] | None = None,
 ) -> GlobalQuizState | StateSnapshot:
+    if thread_id is None:
+        thread_id = f"qthread_{os.urandom(8).hex()}"
+
     initial_state: GlobalQuizState = GlobalQuizState(
         pdf_url_or_base64=pdf_url_or_base64,
         pdf_pages_data=[],
@@ -275,7 +298,7 @@ async def graph_ainvoke(
         final_quiz=[],
     )
 
-    graph = await build_graph()
+    graph = _get_graph()
     config: RunnableConfig = {
         "configurable": {
             "thread_id": thread_id,
