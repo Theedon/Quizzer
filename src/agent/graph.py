@@ -1,3 +1,4 @@
+import asyncio
 import os
 from typing import Awaitable, Callable, Final, Literal, cast
 
@@ -287,6 +288,7 @@ async def graph_ainvoke(
     pdf_url_or_base64: str = "temp/sample.pdf",
     thread_id: str | None = None,
     on_update: Callable[[dict], Awaitable[None]] | None = None,
+    cancel_event: asyncio.Event | None = None,
 ) -> GlobalQuizState | StateSnapshot:
     if thread_id is None:
         thread_id = f"qthread_{os.urandom(8).hex()}"
@@ -322,6 +324,10 @@ async def graph_ainvoke(
                 await on_update(update)
             except Exception as exc:
                 logger.warning(f"on_update callback error (ignored): {exc}")
+
+        if cancel_event is not None and cancel_event.is_set():
+            logger.info("Graph execution cancelled by user")
+            break
 
     final_state = await graph.aget_state(config=config)
 

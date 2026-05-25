@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -36,6 +37,7 @@ async def test_run_generation_maps_updates_to_progress(monkeypatch):
         pdf_url_or_base64: str,
         thread_id: str | None = None,
         on_update=None,
+        cancel_event=None,
     ) -> Any:
         for update in fake_updates:
             if on_update is not None:
@@ -69,7 +71,7 @@ async def test_run_generation_maps_updates_to_progress(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_run_generation_records_error(monkeypatch):
-    async def fake_graph_ainvoke(*_args, **_kwargs):
+    async def fake_graph_ainvoke(*_args, cancel_event=None, **_kwargs):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(runner_module, "graph_ainvoke", fake_graph_ainvoke)
@@ -96,7 +98,7 @@ def test_fraction_zero_when_total_chunks_unknown():
 async def test_run_generation_supports_async_callback(monkeypatch):
     """on_progress can be either sync or async; the runner awaits when needed."""
 
-    async def fake_graph_ainvoke(*_args, on_update=None, **_kwargs):
+    async def fake_graph_ainvoke(*_args, on_update=None, cancel_event=None, **_kwargs):
         if on_update is not None:
             await on_update({"page_ingestor": {"pdf_pages_data": [{}]}})
             await on_update({"chunking": {"crawled_chunks": [{}]}})
@@ -115,3 +117,59 @@ async def test_run_generation_supports_async_callback(monkeypatch):
 
     assert len(result) == 1
     assert snapshots[-1].phase == "done"
+
+
+@pytest.mark.asyncio
+async def test_run_generation_cancels_early(monkeypatch):
+    """When cancel_event is set, generation stops and returns partial results."""
+    cancel_event = asyncio.Event()
+
+    fake_updates = [
+        {"page_ingestor": {"pdf_pages_data": [{"page_number": i, "content": ""} for i in range(1, 4)]}},
+        {"chunking": {"crawled_chunks": [{}, {}, {}, {}]}},
+        {"subgraph_generator": {"final_quiz": [_quiz("c1", 1)]}},
+        # cancel_event will be set after the first subgraph update
+        {"subgraph_generator": {"final_quiz": [_quiz("c2", 2)]}},
+        {"subgraph_generator": {"final_quiz": [_quiz("c3", 3)]}},
+        {"subgraph_generator": {"final_quiz": [_quiz("c4", 4)]}},
+        {"aggregator": {"final_quiz": [_quiz("c1", 1), _quiz("c2", 2), _quiz("c3", 3), _quiz("c4", 4)]}},
+    ]
+
+    call_count = 0
+
+    async def fake_graph_ainvoke(
+        pdf_url_or_base64: str,
+        thread_id: str | None = None,
+        on_update=None,
+        cancel_event: asyncio.Event | None = None,
+    ) -> Any:
+        nonlocal call_count
+        for update in fake_updates:
+            if cancel_event is not None and cancel_event.is_set():
+                break
+            if on_update is not None:
+                await on_update(update)
+            call_count += 1
+            # Set cancel after first subgraph_generator update
+            if call_count == 3:
+                cancel_event.set()
+        return {"final_quiz": [_quiz("c1", 1)]}
+
+    monkeypatch.setattr(runner_module, "graph_ainvoke", fake_graph_ainvoke)
+
+    snapshots: list[GenerationProgress] = []
+
+    def push(snap: GenerationProgress) -> None:
+        snapshots.append(snap)
+
+    result = await run_generation("dummy.pdf", push, cancel_event=cancel_event)
+
+    # Should return partial results (only what was collected before cancellation)
+    assert len(result) >= 1
+    assert len(result) < 4  # not all 4 chunks completed
+
+    # Final snapshot should be "done"
+    assert snapshots[-1].phase == "done"
+
+    # The quizzes returned should match what was collected
+    assert len(result) == len(snapshots[-1].quizzes)
