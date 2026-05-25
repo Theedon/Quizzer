@@ -215,13 +215,7 @@ def index() -> None:
             ui.notify("Upload a PDF first", type="warning")
             return
 
-        provider = state["provider"]
-        settings.MODEL_PROVIDER = provider  # type: ignore[assignment]
-        model_field = PROVIDER_MODEL_FIELD[provider]
-        if state["model"]:
-            setattr(settings, model_field, state["model"])
-        settings.GEN_CONCURRENCY = int(state["concurrency"]) or 1
-        provider_chip.set_text(f"provider: {provider}")
+        provider_chip.set_text(f"provider: {state['provider']}")
 
         state["running"] = True
         state["quizzes"] = []
@@ -243,6 +237,9 @@ def index() -> None:
                 state["pdf_path"],
                 push,
                 cancel_event=state["cancel_event"],
+                provider=state["provider"],
+                model_name=state["model"],
+                concurrency=int(state["concurrency"]) or 1,
             )
             if state["cancel_event"] and state["cancel_event"].is_set():
                 ui.notify(

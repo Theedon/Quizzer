@@ -38,6 +38,9 @@ async def test_run_generation_maps_updates_to_progress(monkeypatch):
         thread_id: str | None = None,
         on_update=None,
         cancel_event=None,
+        provider: str | None = None,
+        model_name: str | None = None,
+        concurrency: int | None = None,
     ) -> Any:
         for update in fake_updates:
             if on_update is not None:
@@ -71,7 +74,15 @@ async def test_run_generation_maps_updates_to_progress(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_run_generation_records_error(monkeypatch):
-    async def fake_graph_ainvoke(*_args, cancel_event=None, **_kwargs):
+    async def fake_graph_ainvoke(
+        *_args,
+        on_update=None,
+        cancel_event=None,
+        provider=None,
+        model_name=None,
+        concurrency=None,
+        **_kwargs,
+    ):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(runner_module, "graph_ainvoke", fake_graph_ainvoke)
@@ -98,7 +109,9 @@ def test_fraction_zero_when_total_chunks_unknown():
 async def test_run_generation_supports_async_callback(monkeypatch):
     """on_progress can be either sync or async; the runner awaits when needed."""
 
-    async def fake_graph_ainvoke(*_args, on_update=None, cancel_event=None, **_kwargs):
+    async def fake_graph_ainvoke(
+        *_args, on_update=None, cancel_event=None, provider=None, model_name=None, concurrency=None, **_kwargs
+    ):
         if on_update is not None:
             await on_update({"page_ingestor": {"pdf_pages_data": [{}]}})
             await on_update({"chunking": {"crawled_chunks": [{}]}})
@@ -142,6 +155,9 @@ async def test_run_generation_cancels_early(monkeypatch):
         thread_id: str | None = None,
         on_update=None,
         cancel_event: asyncio.Event | None = None,
+        provider: str | None = None,
+        model_name: str | None = None,
+        concurrency: int | None = None,
     ) -> Any:
         nonlocal call_count
         for update in fake_updates:
