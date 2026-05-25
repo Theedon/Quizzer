@@ -219,7 +219,7 @@ async def quiz_reviewer(state: SubGraphState) -> dict[str, int | bool]:
         )
         return {
             "is_quiz_relevant": False,
-            "iter_count": state.get("iter_count", 0) + 1,
+            "iter_count": MAX_SUBGRAPH_ITER,
         }
     structured_llm = get_llm().with_structured_output(ReviewedQuiz)
 
@@ -250,7 +250,7 @@ async def should_regenerate_quiz(
 ) -> Literal["regenerate", "completed"]:
     logger.trace(f"Quiz relevance: {state.get('is_quiz_relevant', False)}, ")
     if (
-        state.get("is_quiz_relevant", False) is False
+        not state.get("is_quiz_relevant", False)
         and state.get("iter_count", 0) < MAX_SUBGRAPH_ITER
     ):
         return "regenerate"
