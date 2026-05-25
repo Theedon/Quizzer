@@ -223,6 +223,7 @@ def index() -> None:
 
         state["running"] = True
         state["quizzes"] = []
+        state["page"] = 0
         state["progress"] = GenerationProgress(phase="ingesting")
         generate_btn.disable()
         progress_view.refresh()
@@ -231,9 +232,7 @@ def index() -> None:
         def push(snapshot: GenerationProgress) -> None:
             state["progress"] = snapshot
             state["quizzes"] = [dict(q) for q in snapshot.quizzes]
-            state["page"] = 0
             progress_view.refresh()
-            cards_view.refresh()
 
         try:
             await run_generation(state["pdf_path"], push)
