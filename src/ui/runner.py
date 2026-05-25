@@ -36,6 +36,9 @@ OnProgress = Callable[[GenerationProgress], Awaitable[None] | None]
 async def run_generation(
     pdf_path: str,
     on_progress: OnProgress,
+    provider: str | None = None,
+    model_name: str | None = None,
+    concurrency: int | None = None,
 ) -> list[FinalQuizItem]:
     progress = GenerationProgress(phase="ingesting")
     await _emit(on_progress, progress)
@@ -70,6 +73,9 @@ async def run_generation(
         result = await graph_ainvoke(
             pdf_url_or_base64=pdf_path,
             on_update=on_update,
+            provider=provider,
+            model_name=model_name,
+            concurrency=concurrency,
         )
     except Exception as exc:
         logger.exception("Generation failed")

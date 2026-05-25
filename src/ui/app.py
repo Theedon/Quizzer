@@ -192,13 +192,7 @@ def index() -> None:
             ui.notify("Upload a PDF first", type="warning")
             return
 
-        provider = state["provider"]
-        settings.MODEL_PROVIDER = provider  # type: ignore[assignment]
-        model_field = PROVIDER_MODEL_FIELD[provider]
-        if state["model"]:
-            setattr(settings, model_field, state["model"])
-        settings.GEN_CONCURRENCY = int(state["concurrency"]) or 1
-        provider_chip.set_text(f"provider: {provider}")
+        provider_chip.set_text(f"provider: {state['provider']}")
 
         state["running"] = True
         state["quizzes"] = []
@@ -215,7 +209,13 @@ def index() -> None:
             cards_view.refresh()
 
         try:
-            await run_generation(state["pdf_path"], push)
+            await run_generation(
+                state["pdf_path"],
+                push,
+                provider=state["provider"],
+                model_name=state["model"],
+                concurrency=int(state["concurrency"]) or 1,
+            )
             ui.notify(
                 f"Generated {len(state['quizzes'])} questions",
                 type="positive",
