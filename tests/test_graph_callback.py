@@ -29,10 +29,7 @@ async def test_on_update_exception_does_not_abort_graph(monkeypatch):
     mock_graph.astream = fake_astream
     mock_graph.aget_state = AsyncMock(return_value=fake_final_state)
 
-    async def fake_build_graph():
-        return mock_graph
-
-    monkeypatch.setattr(graph_module, "build_graph", fake_build_graph)
+    monkeypatch.setattr(graph_module, "build_graph", lambda: mock_graph)
 
     # on_update that always raises
     async def exploding_callback(update):
@@ -67,10 +64,7 @@ async def test_on_update_healthy_callback_still_receives_updates(monkeypatch):
     mock_graph.astream = fake_astream
     mock_graph.aget_state = AsyncMock(return_value=fake_final_state)
 
-    async def fake_build_graph():
-        return mock_graph
-
-    monkeypatch.setattr(graph_module, "build_graph", fake_build_graph)
+    monkeypatch.setattr(graph_module, "build_graph", lambda: mock_graph)
 
     received: list[dict] = []
 

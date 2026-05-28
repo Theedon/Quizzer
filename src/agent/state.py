@@ -32,6 +32,8 @@ class GlobalQuizState(TypedDict):
     pdf_pages_data: list[PDFPageData]
     crawled_chunks: list[ChunkData]
     final_quiz: Annotated[list[FinalQuizItem], add]
+    provider: str
+    model_name: str
 
 
 class SubGraphState(TypedDict):
@@ -39,3 +41,5 @@ class SubGraphState(TypedDict):
     quiz: list[FinalQuizItem]
     iter_count: int
     is_quiz_relevant: bool
+    provider: str
+    model_name: str

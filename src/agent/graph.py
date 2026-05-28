@@ -85,7 +85,15 @@ async def chunking(state: GlobalQuizState) -> dict[str, list[ChunkData]]:
 
 def route_chunks_to_subgraph(state: GlobalQuizState) -> list[Send]:
     chunks = state.get("crawled_chunks", [])
-    return [Send("subgraph_generator", {"chunk": chunk}) for chunk in chunks]
+    provider = state.get("provider", "")
+    model_name = state.get("model_name", "")
+    return [
+        Send(
+            "subgraph_generator",
+            {"chunk": chunk, "provider": provider, "model_name": model_name},
+        )
+        for chunk in chunks
+    ]
 
 
 async def subgraph_generator(state: SubGraphState) -> dict[str, list[FinalQuizItem]]:
@@ -98,6 +106,8 @@ async def subgraph_generator(state: SubGraphState) -> dict[str, list[FinalQuizIt
         quiz=[],
         iter_count=0,
         is_quiz_relevant=False,
+        provider=state.get("provider", settings.MODEL_PROVIDER),
+        model_name=state.get("model_name", ""),
     )
     logger.info(
         f"firing up subgraph generator for chunk_id: {state['chunk'].get('chunk_id', 'unknown')}"
@@ -162,7 +172,11 @@ async def quiz_generator(state: SubGraphState) -> dict[str, list[FinalQuizItem]]
         )
         return {"quiz": []}
 
-    structured_llm = get_llm().with_structured_output(MultipleQuiz)
+    provider = state.get("provider") or None
+    model_name = state.get("model_name") or None
+    structured_llm = get_llm(provider=provider, model=model_name).with_structured_output(
+        MultipleQuiz
+    )
 
     generator_prompt = GENERATE_QUIZ_PROMPT.format(chunk=chunk_text)
     generator_response = await structured_llm.ainvoke(
@@ -224,7 +238,11 @@ async def quiz_reviewer(state: SubGraphState) -> dict[str, int | bool]:
             "is_quiz_relevant": False,
             "iter_count": MAX_SUBGRAPH_ITER,
         }
-    structured_llm = get_llm().with_structured_output(ReviewedQuiz)
+    provider = state.get("provider") or None
+    model_name = state.get("model_name") or None
+    structured_llm = get_llm(provider=provider, model=model_name).with_structured_output(
+        ReviewedQuiz
+    )
 
     review_prompt = REVIEW_QUIZ_PROMPT.format(
         chunk=chunk_text,
@@ -271,6 +289,9 @@ async def graph_ainvoke(
     thread_id: str | None = None,
     on_update: Callable[[dict], Awaitable[None]] | None = None,
     cancel_event: asyncio.Event | None = None,
+    provider: str | None = None,
+    model_name: str | None = None,
+    concurrency: int | None = None,
 ) -> GlobalQuizState | StateSnapshot:
     if thread_id is None:
         thread_id = f"qthread_{os.urandom(8).hex()}"
@@ -280,14 +301,16 @@ async def graph_ainvoke(
         pdf_pages_data=[],
         crawled_chunks=[],
         final_quiz=[],
+        provider=provider or settings.MODEL_PROVIDER,
+        model_name=model_name or "",
     )
 
     graph = build_graph()
     config: RunnableConfig = {
         "configurable": {
             "thread_id": thread_id,
-            "max_concurrency": settings.GEN_CONCURRENCY,
-        }
+        },
+        "max_concurrency": concurrency or settings.GEN_CONCURRENCY,
     }
 
     logger.info("--------🚦 graph execution stream started--------")
