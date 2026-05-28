@@ -34,6 +34,7 @@ class GlobalQuizState(TypedDict):
     final_quiz: Annotated[list[FinalQuizItem], add]
     provider: str
     model_name: str
+    api_key: str
 
 
 class SubGraphState(TypedDict):
@@ -43,3 +44,4 @@ class SubGraphState(TypedDict):
     is_quiz_relevant: bool
     provider: str
     model_name: str
+    api_key: str

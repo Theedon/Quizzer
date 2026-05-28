@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import os
 import tempfile
 from pathlib import Path
 from typing import IO, Any
@@ -17,6 +18,11 @@ PROVIDER_MODEL_FIELD = {
     "openai": "OPENAI_MODEL",
     "google": "GEMINI_MODEL",
     "groq": "GROQ_MODEL",
+}
+PROVIDER_KEY_LABEL = {
+    "openai": "OpenAI API Key",
+    "google": "Google API Key",
+    "groq": "Groq API Key",
 }
 
 GREEN_PRIMARY = "#16a34a"
@@ -67,6 +73,7 @@ def index() -> None:
         "provider": settings.MODEL_PROVIDER,
         "model": _model_for(settings.MODEL_PROVIDER),
         "concurrency": settings.GEN_CONCURRENCY,
+        "api_key": "",
         "page": 0,
         "page_size": 10,
         "cancel_event": None,
@@ -214,6 +221,17 @@ def index() -> None:
         if not state["pdf_path"]:
             ui.notify("Upload a PDF first", type="warning")
             return
+        server_key_map = {
+            "openai": settings.OPENAI_API_KEY,
+            "google": settings.GEMINI_API_KEY,
+            "groq": settings.GROQ_API_KEY,
+        }
+        if not state["api_key"].strip() and not server_key_map.get(state["provider"]):
+            ui.notify(
+                f"{PROVIDER_KEY_LABEL.get(state['provider'], 'API key')} is required",
+                type="warning",
+            )
+            return
 
         provider_chip.set_text(f"provider: {state['provider']}")
 
@@ -241,6 +259,7 @@ def index() -> None:
                 provider=state["provider"],
                 model_name=state["model"],
                 concurrency=int(state["concurrency"]) or 1,
+                api_key=state["api_key"].strip() or None,
             )
             if state["cancel_event"] and state["cancel_event"].is_set():
                 ui.notify(
@@ -335,7 +354,10 @@ def index() -> None:
     def on_provider_change(e: events.ValueChangeEventArguments) -> None:
         state["provider"] = e.value
         state["model"] = _model_for(e.value)
+        state["api_key"] = ""
         model_input.set_value(state["model"])
+        api_key_input.set_value("")
+        api_key_input.props(f"label='{PROVIDER_KEY_LABEL.get(e.value, 'API Key')}'")
         provider_chip.set_text(f"provider: {state['provider']}")
 
     # ============================================================
@@ -393,6 +415,18 @@ def index() -> None:
                 .classes("w-full")
                 .props("outlined dense")
                 .on_value_change(lambda e: state.update(model=e.value))
+            )
+
+            api_key_input = (
+                ui.input(
+                    label=PROVIDER_KEY_LABEL.get(state["provider"], "API Key"),
+                    value=state["api_key"],
+                    password=True,
+                    password_toggle_button=True,
+                )
+                .classes("w-full")
+                .props("outlined dense")
+                .on_value_change(lambda e: state.update(api_key=e.value))
             )
 
             ui.number(
@@ -466,7 +500,8 @@ def main() -> None:
     app.on_startup(lambda: logger.info("Quizzer UI started"))
     ui.run(
         title="Quizzer",
-        port=8080,
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8080)),
         dark=True,
         reload=False,
         show=False,

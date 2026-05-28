@@ -41,6 +41,7 @@ async def test_run_generation_maps_updates_to_progress(monkeypatch):
         provider: str | None = None,
         model_name: str | None = None,
         concurrency: int | None = None,
+        api_key: str | None = None,
     ) -> Any:
         for update in fake_updates:
             if on_update is not None:
@@ -158,6 +159,7 @@ async def test_run_generation_cancels_early(monkeypatch):
         provider: str | None = None,
         model_name: str | None = None,
         concurrency: int | None = None,
+        api_key: str | None = None,
     ) -> Any:
         nonlocal call_count
         for update in fake_updates:
