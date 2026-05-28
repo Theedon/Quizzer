@@ -83,6 +83,15 @@ async def test_run_generation_records_error(monkeypatch):
     assert "boom" in (snapshots[-1].error or "")
 
 
+def test_fraction_zero_when_total_chunks_unknown():
+    """fraction returns 0.0 when total_chunks is 0 (ingesting/chunking phases)."""
+    p = GenerationProgress(phase="ingesting", total_chunks=0, chunks_done=0)
+    assert p.fraction == 0.0
+
+    p = GenerationProgress(phase="chunking", total_pages=5, total_chunks=0)
+    assert p.fraction == 0.0
+
+
 @pytest.mark.asyncio
 async def test_run_generation_supports_async_callback(monkeypatch):
     """on_progress can be either sync or async; the runner awaits when needed."""
