@@ -305,8 +305,8 @@ async def graph_ainvoke(
     config: RunnableConfig = {
         "configurable": {
             "thread_id": thread_id,
-            "max_concurrency": concurrency or settings.GEN_CONCURRENCY,
-        }
+        },
+        "max_concurrency": concurrency or settings.GEN_CONCURRENCY,
     }
 
     logger.info("--------🚦 graph execution stream started--------")
