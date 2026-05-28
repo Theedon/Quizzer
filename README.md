@@ -2,6 +2,12 @@
 
 An entirely asynchronous, Map-Reduce LangGraph architecture that ingests heavy textbooks and parallelizes LLM quiz generation without context loss.
 
+## Try it live
+
+> **Hosted on Railway:** [quizzer-production-e21f.up.railway.app](https://quizzer-production-e21f.up.railway.app)
+>
+> Select your LLM provider, enter your own API key, upload a PDF, and generate quiz questions — no local setup needed.
+
 ### Graph Architecture
 
 ![Architecture Diagram](docs/architecture.png)
@@ -86,6 +92,8 @@ A small, async NiceGUI frontend that exposes the same pipeline: drop a PDF, watc
 uv run -m src.ui.app
 # then open http://localhost:8080
 ```
+
+> **Or skip the local setup** — try the hosted version at [quizzer-production-e21f.up.railway.app](https://quizzer-production-e21f.up.railway.app)
 
 ![Quizzer GUI](docs/ui_dark.png)
 

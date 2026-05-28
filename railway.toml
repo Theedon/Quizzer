@@ -1,0 +1,13 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "uv run -m src.ui.app"
+
+[[deploy.envVars]]
+name = "ENVIRONMENT"
+value = "production"
+
+[[deploy.envVars]]
+name = "LANGSMITH_TRACING"
+value = "true"
