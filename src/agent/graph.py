@@ -297,7 +297,10 @@ async def graph_ainvoke(
         }
         logger.info(f"Graph Update -  {summary}\n\n")
         if on_update is not None:
-            await on_update(update)
+            try:
+                await on_update(update)
+            except Exception:
+                logger.warning("on_update callback error (ignored)", exc_info=True)
 
         if cancel_event is not None and cancel_event.is_set():
             logger.info("Graph execution cancelled by user")
