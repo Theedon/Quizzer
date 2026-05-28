@@ -43,7 +43,7 @@ async def test_on_update_exception_does_not_abort_graph(monkeypatch):
         pdf_url_or_base64="test.pdf",
         on_update=exploding_callback,
     )
-    assert result is not None
+    assert result == fake_final_state
 
 
 @pytest.mark.asyncio

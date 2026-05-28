@@ -297,8 +297,8 @@ async def graph_ainvoke(
         if on_update is not None:
             try:
                 await on_update(update)
-            except Exception as exc:
-                logger.warning(f"on_update callback error (ignored): {exc}")
+            except Exception:
+                logger.warning("on_update callback error (ignored)", exc_info=True)
 
     final_state = await graph.aget_state(config=config)
 
