@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from nicegui import app, events, ui
 
@@ -21,6 +21,13 @@ PROVIDER_MODEL_FIELD = {
 GREEN_PRIMARY = "#16a34a"
 GREEN_DARK = "#15803d"
 GREEN_ACCENT = "#22c55e"
+
+
+def is_valid_pdf(content: IO[bytes]) -> bool:
+    """Check if file content starts with the PDF magic bytes."""
+    header = content.read(5)
+    content.seek(0)
+    return header == b"%PDF-"
 
 
 def _model_for(provider: str) -> str:
@@ -290,6 +297,13 @@ def index() -> None:
         cards_view.refresh()
 
     async def on_upload(e: events.UploadEventArguments) -> None:
+        from io import BytesIO
+
+        raw = await e.file.read()
+        if not is_valid_pdf(BytesIO(raw)):
+            ui.notify("Uploaded file is not a valid PDF.", type="warning")
+            return
+
         old_path = state["pdf_path"]
         if old_path:
             Path(old_path).unlink(missing_ok=True)
