@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from typing import Awaitable, Callable, Final, Literal, cast
 
 from langchain.messages import HumanMessage
@@ -56,16 +57,6 @@ def build_graph() -> CompiledStateGraph:
     return graph
 
 
-_cached_graph: CompiledStateGraph | None = None
-
-
-def _get_graph() -> CompiledStateGraph:
-    global _cached_graph
-    if _cached_graph is None:
-        _cached_graph = build_graph()
-    return _cached_graph
-
-
 async def page_ingestor(state: GlobalQuizState) -> dict[str, list[PDFPageData]]:
     """
     Receives raw PDF content and prepares it for crawling/chunking.
@@ -100,7 +91,7 @@ async def subgraph_generator(state: SubGraphState) -> dict[str, list[FinalQuizIt
     """
     Generate quiz from chunk using LLM.
     """
-    subgraph = _get_subgraph()
+    subgraph = build_generator_subgraph()
     subgraph_state = SubGraphState(
         chunk=state["chunk"],
         quiz=[],
@@ -129,6 +120,7 @@ MAX_SUBGRAPH_ITER: Final = 3
 retry_policy = RetryPolicy(jitter=True)
 
 
+@lru_cache(maxsize=1)
 def build_generator_subgraph() -> CompiledStateGraph:
     subgraph_builder = StateGraph(SubGraphState)
 
@@ -152,16 +144,6 @@ def build_generator_subgraph() -> CompiledStateGraph:
 
     subgraph = subgraph_builder.compile()
     return subgraph
-
-
-_cached_subgraph: CompiledStateGraph | None = None
-
-
-def _get_subgraph() -> CompiledStateGraph:
-    global _cached_subgraph
-    if _cached_subgraph is None:
-        _cached_subgraph = build_generator_subgraph()
-    return _cached_subgraph
 
 
 async def quiz_generator(state: SubGraphState) -> dict[str, list[FinalQuizItem]]:
@@ -298,7 +280,7 @@ async def graph_ainvoke(
         final_quiz=[],
     )
 
-    graph = _get_graph()
+    graph = build_graph()
     config: RunnableConfig = {
         "configurable": {
             "thread_id": thread_id,
