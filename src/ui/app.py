@@ -186,12 +186,12 @@ def index() -> None:
                 lambda e, q=quiz: q.update(question=e.value)
             )
 
-            with ui.row().classes("w-full no-wrap gap-2"):
+            with ui.row().classes("w-full flex-wrap gap-2"):
                 for letter in ("a", "b", "c", "d"):
                     ui.input(
                         label=f"Option {letter.upper()}",
                         value=quiz.get(f"option_{letter}", ""),
-                    ).classes("grow").props("outlined dense").on_value_change(
+                    ).style("flex: 1 1 10rem").props("outlined dense").on_value_change(
                         lambda e, q=quiz, k=f"option_{letter}": q.update({k: e.value})
                     )
 
@@ -367,9 +367,12 @@ def index() -> None:
     # ---------- top bar ----------
     with ui.header(elevated=True).classes("items-center justify-between bg-primary"):
         with ui.row().classes("items-center gap-3"):
+            ui.button(icon="menu", on_click=lambda: sidebar_drawer.toggle()).props(
+                "flat round color=white"
+            )
             ui.icon("school").classes("text-2xl text-white")
             ui.label("Quizzer").classes("text-xl font-semibold text-white")
-            ui.label("PDF → quiz CSV").classes("text-xs text-white/70")
+            ui.label("PDF → quiz CSV").classes("text-xs text-white/70 hidden sm:block")
         with ui.row().classes("items-center gap-2"):
             provider_chip = ui.chip(
                 f"provider: {state['provider']}",
@@ -390,15 +393,9 @@ def index() -> None:
                 .tooltip("Toggle dark mode")
             )
 
-    # ---------- main split ----------
-    with ui.row().classes("w-full no-wrap gap-6 p-6 items-start"):
-
-        # ---------- sidebar ----------
-        with ui.column().classes(
-            "w-72 shrink-0 gap-4 p-4 rounded-xl"
-        ).style(
-            "background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.18);"
-        ):
+    # ---------- sidebar drawer ----------
+    with ui.left_drawer(bordered=True).props("breakpoint=768") as sidebar_drawer:
+        with ui.column().classes("gap-4 p-4"):
             ui.label("Model settings").classes(
                 "text-sm font-semibold uppercase text-primary"
             )
@@ -444,55 +441,55 @@ def index() -> None:
                 "Changes apply on the next Generate click — current runs keep their settings."
             ).classes("text-xs opacity-70")
 
-        # ---------- main column ----------
-        with ui.column().classes("grow gap-4 min-w-0"):
+    # ---------- main column ----------
+    with ui.column().classes("w-full gap-4 p-4 sm:p-6"):
 
-            # --- upload ---
-            with ui.card().classes("w-full p-4"):
-                ui.label("1. Upload PDF").classes(
-                    "text-sm font-semibold text-primary"
-                )
-                ui.upload(
-                    label="Drop a PDF here or click to browse",
-                    auto_upload=True,
-                    multiple=False,
-                    on_upload=on_upload,
-                ).props('accept=".pdf" color=primary').classes("w-full")
-                upload_status = ui.label("No file selected").classes(
-                    "text-xs opacity-50"
-                )
+        # --- upload ---
+        with ui.card().classes("w-full p-4"):
+            ui.label("1. Upload PDF").classes(
+                "text-sm font-semibold text-primary"
+            )
+            ui.upload(
+                label="Drop a PDF here or click to browse",
+                auto_upload=True,
+                multiple=False,
+                on_upload=on_upload,
+            ).props('accept=".pdf" color=primary').classes("w-full")
+            upload_status = ui.label("No file selected").classes(
+                "text-xs opacity-50"
+            )
 
-            # --- generate / reset / cancel ---
-            @ui.refreshable
-            def action_buttons() -> None:
-                with ui.row().classes("w-full gap-2"):
-                    if state["running"] and state["cancel_event"]:
-                        ui.button(
-                            "Cancel",
-                            icon="cancel",
-                            on_click=lambda: state["cancel_event"].set(),
-                        ).props("color=red unelevated")
-                    else:
-                        ui.button(
-                            "Reset",
-                            icon="refresh",
-                            on_click=reset_all,
-                        ).props("flat color=primary")
+        # --- generate / reset / cancel ---
+        @ui.refreshable
+        def action_buttons() -> None:
+            with ui.row().classes("w-full gap-2"):
+                if state["running"] and state["cancel_event"]:
+                    ui.button(
+                        "Cancel",
+                        icon="cancel",
+                        on_click=lambda: state["cancel_event"].set(),
+                    ).props("color=red unelevated")
+                else:
+                    ui.button(
+                        "Reset",
+                        icon="refresh",
+                        on_click=reset_all,
+                    ).props("flat color=primary")
 
-            generate_btn = ui.button(
-                "Generate Quiz",
-                icon="play_arrow",
-                on_click=on_generate,
-            ).props("color=primary unelevated")
-            generate_btn.disable()
+        generate_btn = ui.button(
+            "Generate Quiz",
+            icon="play_arrow",
+            on_click=on_generate,
+        ).props("color=primary unelevated")
+        generate_btn.disable()
 
-            action_buttons()
+        action_buttons()
 
-            # --- progress ---
-            progress_view()
+        # --- progress ---
+        progress_view()
 
-            # --- cards ---
-            cards_view()
+        # --- cards ---
+        cards_view()
 
 
 def main() -> None:
