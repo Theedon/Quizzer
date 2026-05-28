@@ -210,7 +210,8 @@ def index() -> None:
 
         def push(snapshot: GenerationProgress) -> None:
             state["progress"] = snapshot
-            state["quizzes"] = [dict(q) for q in snapshot.quizzes]
+            if snapshot.phase in ("done", "error"):
+                state["quizzes"] = [dict(q) for q in snapshot.quizzes]
             progress_view.refresh()
 
         try:
