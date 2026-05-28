@@ -87,10 +87,11 @@ def route_chunks_to_subgraph(state: GlobalQuizState) -> list[Send]:
     chunks = state.get("crawled_chunks", [])
     provider = state.get("provider", "")
     model_name = state.get("model_name", "")
+    api_key = state.get("api_key", "")
     return [
         Send(
             "subgraph_generator",
-            {"chunk": chunk, "provider": provider, "model_name": model_name},
+            {"chunk": chunk, "provider": provider, "model_name": model_name, "api_key": api_key},
         )
         for chunk in chunks
     ]
@@ -108,6 +109,7 @@ async def subgraph_generator(state: SubGraphState) -> dict[str, list[FinalQuizIt
         is_quiz_relevant=False,
         provider=state.get("provider", settings.MODEL_PROVIDER),
         model_name=state.get("model_name", ""),
+        api_key=state.get("api_key", ""),
     )
     logger.info(
         f"firing up subgraph generator for chunk_id: {state['chunk'].get('chunk_id', 'unknown')}"
@@ -174,7 +176,8 @@ async def quiz_generator(state: SubGraphState) -> dict[str, list[FinalQuizItem]]
 
     provider = state.get("provider") or None
     model_name = state.get("model_name") or None
-    structured_llm = get_llm(provider=provider, model=model_name).with_structured_output(
+    api_key = state.get("api_key") or None
+    structured_llm = get_llm(provider=provider, model=model_name, api_key=api_key).with_structured_output(
         MultipleQuiz
     )
 
@@ -240,7 +243,8 @@ async def quiz_reviewer(state: SubGraphState) -> dict[str, int | bool]:
         }
     provider = state.get("provider") or None
     model_name = state.get("model_name") or None
-    structured_llm = get_llm(provider=provider, model=model_name).with_structured_output(
+    api_key = state.get("api_key") or None
+    structured_llm = get_llm(provider=provider, model=model_name, api_key=api_key).with_structured_output(
         ReviewedQuiz
     )
 
@@ -292,6 +296,7 @@ async def graph_ainvoke(
     provider: str | None = None,
     model_name: str | None = None,
     concurrency: int | None = None,
+    api_key: str | None = None,
 ) -> GlobalQuizState | StateSnapshot:
     if thread_id is None:
         thread_id = f"qthread_{os.urandom(8).hex()}"
@@ -303,6 +308,7 @@ async def graph_ainvoke(
         final_quiz=[],
         provider=provider or settings.MODEL_PROVIDER,
         model_name=model_name or "",
+        api_key=api_key or "",
     )
 
     graph = build_graph()

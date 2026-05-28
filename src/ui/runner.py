@@ -41,6 +41,7 @@ async def run_generation(
     provider: str | None = None,
     model_name: str | None = None,
     concurrency: int | None = None,
+    api_key: str | None = None,
 ) -> list[FinalQuizItem]:
     progress = GenerationProgress(phase="ingesting")
     await _emit(on_progress, progress)
@@ -85,6 +86,7 @@ async def run_generation(
             provider=provider,
             model_name=model_name,
             concurrency=concurrency,
+            api_key=api_key,
         )
     except Exception as exc:
         logger.exception("Generation failed")

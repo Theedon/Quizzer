@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: quizzer
+    runtime: python
+    buildCommand: pip install uv && uv sync
+    startCommand: uv run -m src.ui.app
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: LANGSMITH_TRACING
+        value: "false"
