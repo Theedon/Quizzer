@@ -87,7 +87,7 @@ async def run_generation(
         await _emit(on_progress, progress)
         raise
 
-    if cancelled:
+    if cancelled or (cancel_event is not None and cancel_event.is_set()):
         logger.info("Generation cancelled by user")
         progress.phase = "done"
         await _emit(on_progress, progress)
