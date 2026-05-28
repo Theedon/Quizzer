@@ -1,5 +1,6 @@
 [build]
 builder = "nixpacks"
+buildCommand = "pip install uv && uv sync --no-dev --frozen"
 
 [deploy]
 startCommand = "uv run -m src.ui.app"
