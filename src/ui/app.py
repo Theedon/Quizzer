@@ -83,11 +83,11 @@ def index() -> None:
                 ).classes("w-full")
 
             if p.phase == "idle":
-                detail = "Ready"
+                detail = ""
             elif p.phase == "ingesting":
-                detail = "Reading PDF…"
+                detail = "Preparing document..."
             elif p.phase == "chunking":
-                detail = f"pages {p.total_pages} · Splitting into chunks…"
+                detail = f"pages {p.total_pages}"
             else:
                 detail = (
                     f"pages {p.total_pages} · "
