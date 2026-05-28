@@ -24,14 +24,14 @@ def get_llm(
         key = api_key or settings.GEMINI_API_KEY
         return ChatGoogleGenerativeAI(
             model=model or settings.GEMINI_MODEL,
-            api_key=SecretStr(key),
+            api_key=SecretStr(key) if key else None,
             temperature=1.0,
         )
     if chosen == "groq":
         key = api_key or settings.GROQ_API_KEY
         return ChatGroq(
             model=model or settings.GROQ_MODEL,
-            api_key=SecretStr(key),
+            api_key=SecretStr(key) if key else None,
             temperature=1.0,
         )
     if chosen == "openai":

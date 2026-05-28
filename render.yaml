@@ -8,4 +8,6 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: LANGSMITH_TRACING
-        value: "false"
+        value: "true"
+      - key: LANGSMITH_API_KEY
+        sync: false

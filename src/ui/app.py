@@ -221,7 +221,12 @@ def index() -> None:
         if not state["pdf_path"]:
             ui.notify("Upload a PDF first", type="warning")
             return
-        if not state["api_key"].strip():
+        server_key_map = {
+            "openai": settings.OPENAI_API_KEY,
+            "google": settings.GEMINI_API_KEY,
+            "groq": settings.GROQ_API_KEY,
+        }
+        if not state["api_key"].strip() and not server_key_map.get(state["provider"]):
             ui.notify(
                 f"{PROVIDER_KEY_LABEL.get(state['provider'], 'API key')} is required",
                 type="warning",

@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     MODEL_PROVIDER: Literal["google", "groq", "openai"] = "openai"
 
     LANGSMITH_API_KEY: str = ""
-    LANGSMITH_TRACING: bool = True
+    LANGSMITH_TRACING: bool = False
     LANGSMITH_PROJECT: str = "quizzer"
     LANGSMITH_ENDPOINT: str = "https://api.smith.langchain.com"
 
