@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import math
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from nicegui import app, events, ui
 
@@ -21,6 +22,13 @@ PROVIDER_MODEL_FIELD = {
 GREEN_PRIMARY = "#16a34a"
 GREEN_DARK = "#15803d"
 GREEN_ACCENT = "#22c55e"
+
+
+def is_valid_pdf(content: IO[bytes]) -> bool:
+    """Check if file content starts with the PDF magic bytes."""
+    header = content.read(5)
+    content.seek(0)
+    return header == b"%PDF-"
 
 
 def _model_for(provider: str) -> str:
@@ -61,6 +69,7 @@ def index() -> None:
         "concurrency": settings.GEN_CONCURRENCY,
         "page": 0,
         "page_size": 10,
+        "cancel_event": None,
     }
 
     # ============================================================
@@ -72,14 +81,28 @@ def index() -> None:
         p: GenerationProgress = state["progress"]
         with ui.card().classes("w-full p-4"):
             ui.label(_phase_label(p)).classes("text-sm font-semibold text-primary")
-            ui.linear_progress(value=p.fraction, show_value=False).props(
-                "color=primary rounded"
-            ).classes("w-full")
-            detail = (
-                f"pages {p.total_pages} · "
-                f"chunks {p.chunks_done}/{p.total_chunks or '?'} · "
-                f"questions {len(p.quizzes)}"
-            )
+
+            if p.phase in ("ingesting", "chunking"):
+                ui.linear_progress(show_value=False).props(
+                    "indeterminate color=primary rounded"
+                ).classes("w-full")
+            else:
+                ui.linear_progress(value=p.fraction, show_value=False).props(
+                    "color=primary rounded"
+                ).classes("w-full")
+
+            if p.phase == "idle":
+                detail = ""
+            elif p.phase == "ingesting":
+                detail = "Preparing document..."
+            elif p.phase == "chunking":
+                detail = f"pages {p.total_pages}"
+            else:
+                detail = (
+                    f"pages {p.total_pages} · "
+                    f"chunks {p.chunks_done}/{p.total_chunks or '?'} · "
+                    f"questions {len(p.quizzes)}"
+                )
             ui.label(detail).classes("text-xs opacity-70")
             if p.phase == "error" and p.error:
                 ui.label(f"Error: {p.error}").classes("text-xs text-negative")
@@ -196,38 +219,49 @@ def index() -> None:
 
         state["running"] = True
         state["quizzes"] = []
+        state["page"] = 0
         state["progress"] = GenerationProgress(phase="ingesting")
+        state["cancel_event"] = asyncio.Event()
         generate_btn.disable()
         progress_view.refresh()
         cards_view.refresh()
+        action_buttons.refresh()
 
         def push(snapshot: GenerationProgress) -> None:
             state["progress"] = snapshot
-            state["quizzes"] = [dict(q) for q in snapshot.quizzes]
-            state["page"] = 0
+            if snapshot.phase in ("done", "error"):
+                state["quizzes"] = [dict(q) for q in snapshot.quizzes]
             progress_view.refresh()
-            cards_view.refresh()
 
         try:
             await run_generation(
                 state["pdf_path"],
                 push,
+                cancel_event=state["cancel_event"],
                 provider=state["provider"],
                 model_name=state["model"],
                 concurrency=int(state["concurrency"]) or 1,
             )
-            ui.notify(
-                f"Generated {len(state['quizzes'])} questions",
-                type="positive",
-            )
+            if state["cancel_event"] and state["cancel_event"].is_set():
+                ui.notify(
+                    f"Cancelled — kept {len(state['quizzes'])} questions",
+                    type="warning",
+                )
+            else:
+                ui.notify(
+                    f"Generated {len(state['quizzes'])} questions",
+                    type="positive",
+                )
         except Exception as exc:
             logger.exception("UI generation failed")
             ui.notify(f"Generation failed: {exc}", type="negative")
         finally:
             state["running"] = False
+            state["cancel_event"] = None
             generate_btn.enable()
             progress_view.refresh()
             cards_view.refresh()
+            action_buttons.refresh()
 
     def on_download() -> None:
         quizzes = state["quizzes"]
@@ -276,6 +310,13 @@ def index() -> None:
         cards_view.refresh()
 
     async def on_upload(e: events.UploadEventArguments) -> None:
+        from io import BytesIO
+
+        raw = await e.file.read()
+        if not is_valid_pdf(BytesIO(raw)):
+            ui.notify("Uploaded file is not a valid PDF.", type="warning")
+            return
+
         old_path = state["pdf_path"]
         if old_path:
             Path(old_path).unlink(missing_ok=True)
@@ -387,20 +428,31 @@ def index() -> None:
                     "text-xs opacity-50"
                 )
 
-            # --- generate / reset ---
-            with ui.row().classes("w-full gap-2"):
-                generate_btn = ui.button(
-                    "Generate Quiz",
-                    icon="play_arrow",
-                    on_click=on_generate,
-                ).props("color=primary unelevated")
-                generate_btn.disable()
+            # --- generate / reset / cancel ---
+            @ui.refreshable
+            def action_buttons() -> None:
+                with ui.row().classes("w-full gap-2"):
+                    if state["running"] and state["cancel_event"]:
+                        ui.button(
+                            "Cancel",
+                            icon="cancel",
+                            on_click=lambda: state["cancel_event"].set(),
+                        ).props("color=red unelevated")
+                    else:
+                        ui.button(
+                            "Reset",
+                            icon="refresh",
+                            on_click=reset_all,
+                        ).props("flat color=primary")
 
-                ui.button(
-                    "Reset",
-                    icon="refresh",
-                    on_click=reset_all,
-                ).props("flat color=primary")
+            generate_btn = ui.button(
+                "Generate Quiz",
+                icon="play_arrow",
+                on_click=on_generate,
+            ).props("color=primary unelevated")
+            generate_btn.disable()
+
+            action_buttons()
 
             # --- progress ---
             progress_view()

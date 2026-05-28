@@ -1,4 +1,6 @@
+import asyncio
 import os
+from functools import lru_cache
 from typing import Awaitable, Callable, Final, Literal, cast
 
 from langchain.messages import HumanMessage
@@ -26,7 +28,7 @@ from .utils import chunk_pdf_content, ingest_pdf
 # ============================================================================
 
 
-async def build_graph() -> CompiledStateGraph:
+def build_graph() -> CompiledStateGraph:
 
     memory = InMemorySaver()
     builder = StateGraph(GlobalQuizState)
@@ -98,7 +100,7 @@ async def subgraph_generator(state: SubGraphState) -> dict[str, list[FinalQuizIt
     """
     Generate quiz from chunk using LLM.
     """
-    subgraph = await build_generator_subgraph()
+    subgraph = build_generator_subgraph()
     subgraph_state = SubGraphState(
         chunk=state["chunk"],
         quiz=[],
@@ -129,7 +131,8 @@ MAX_SUBGRAPH_ITER: Final = 3
 retry_policy = RetryPolicy(jitter=True)
 
 
-async def build_generator_subgraph() -> CompiledStateGraph:
+@lru_cache(maxsize=1)
+def build_generator_subgraph() -> CompiledStateGraph:
     subgraph_builder = StateGraph(SubGraphState)
 
     subgraph_builder.add_node(
@@ -233,7 +236,7 @@ async def quiz_reviewer(state: SubGraphState) -> dict[str, int | bool]:
         )
         return {
             "is_quiz_relevant": False,
-            "iter_count": state.get("iter_count", 0) + 1,
+            "iter_count": MAX_SUBGRAPH_ITER,
         }
     provider = state.get("provider") or None
     model_name = state.get("model_name") or None
@@ -268,7 +271,7 @@ async def should_regenerate_quiz(
 ) -> Literal["regenerate", "completed"]:
     logger.trace(f"Quiz relevance: {state.get('is_quiz_relevant', False)}, ")
     if (
-        state.get("is_quiz_relevant", False) is False
+        not state.get("is_quiz_relevant", False)
         and state.get("iter_count", 0) < MAX_SUBGRAPH_ITER
     ):
         return "regenerate"
@@ -285,6 +288,7 @@ async def graph_ainvoke(
     pdf_url_or_base64: str = "temp/sample.pdf",
     thread_id: str | None = None,
     on_update: Callable[[dict], Awaitable[None]] | None = None,
+    cancel_event: asyncio.Event | None = None,
     provider: str | None = None,
     model_name: str | None = None,
     concurrency: int | None = None,
@@ -301,7 +305,7 @@ async def graph_ainvoke(
         model_name=model_name or "",
     )
 
-    graph = await build_graph()
+    graph = build_graph()
     config: RunnableConfig = {
         "configurable": {
             "thread_id": thread_id,
@@ -321,7 +325,14 @@ async def graph_ainvoke(
         }
         logger.info(f"Graph Update -  {summary}\n\n")
         if on_update is not None:
-            await on_update(update)
+            try:
+                await on_update(update)
+            except Exception:
+                logger.warning("on_update callback error (ignored)", exc_info=True)
+
+        if cancel_event is not None and cancel_event.is_set():
+            logger.info("Graph execution cancelled by user")
+            break
 
     final_state = await graph.aget_state(config=config)
 
