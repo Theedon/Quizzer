@@ -298,7 +298,7 @@ def index() -> None:
         suffix = Path(filename).suffix or ".pdf"
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
         tmp.close()
-        Path(tmp.name).write_bytes(raw)
+        await e.file.save(tmp.name)
         state["pdf_path"] = tmp.name
         state["pdf_name"] = filename
         upload_status.set_text(f"Loaded: {filename}")
