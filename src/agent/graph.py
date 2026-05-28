@@ -1,5 +1,6 @@
 import asyncio
 import os
+from functools import lru_cache
 from typing import Awaitable, Callable, Final, Literal, cast
 
 from langchain.messages import HumanMessage
@@ -27,7 +28,7 @@ from .utils import chunk_pdf_content, ingest_pdf
 # ============================================================================
 
 
-async def build_graph() -> CompiledStateGraph:
+def build_graph() -> CompiledStateGraph:
 
     memory = InMemorySaver()
     builder = StateGraph(GlobalQuizState)
@@ -91,7 +92,7 @@ async def subgraph_generator(state: SubGraphState) -> dict[str, list[FinalQuizIt
     """
     Generate quiz from chunk using LLM.
     """
-    subgraph = await build_generator_subgraph()
+    subgraph = build_generator_subgraph()
     subgraph_state = SubGraphState(
         chunk=state["chunk"],
         quiz=[],
@@ -120,7 +121,8 @@ MAX_SUBGRAPH_ITER: Final = 3
 retry_policy = RetryPolicy(jitter=True)
 
 
-async def build_generator_subgraph() -> CompiledStateGraph:
+@lru_cache(maxsize=1)
+def build_generator_subgraph() -> CompiledStateGraph:
     subgraph_builder = StateGraph(SubGraphState)
 
     subgraph_builder.add_node(
@@ -266,10 +268,13 @@ async def should_regenerate_quiz(
 
 async def graph_ainvoke(
     pdf_url_or_base64: str = "temp/sample.pdf",
-    thread_id: str = f"qthread_{os.urandom(8).hex()}",
+    thread_id: str | None = None,
     on_update: Callable[[dict], Awaitable[None]] | None = None,
     cancel_event: asyncio.Event | None = None,
 ) -> GlobalQuizState | StateSnapshot:
+    if thread_id is None:
+        thread_id = f"qthread_{os.urandom(8).hex()}"
+
     initial_state: GlobalQuizState = GlobalQuizState(
         pdf_url_or_base64=pdf_url_or_base64,
         pdf_pages_data=[],
@@ -277,7 +282,7 @@ async def graph_ainvoke(
         final_quiz=[],
     )
 
-    graph = await build_graph()
+    graph = build_graph()
     config: RunnableConfig = {
         "configurable": {
             "thread_id": thread_id,
