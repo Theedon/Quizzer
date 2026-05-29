@@ -359,6 +359,7 @@ def index() -> None:
         api_key_input.set_value("")
         api_key_input.props(f"label='{PROVIDER_KEY_LABEL.get(e.value, 'API Key')}'")
         provider_chip.set_text(f"provider: {state['provider']}")
+        free_key_link.set_visibility(e.value == "groq")
 
     # ============================================================
     # UI build
@@ -425,6 +426,12 @@ def index() -> None:
                 .props("outlined dense")
                 .on_value_change(lambda e: state.update(api_key=e.value))
             )
+
+            free_key_link = (
+                ui.link("Get a free API key →", "https://console.groq.com/keys", new_tab=True)
+                .classes("text-xs text-primary")
+            )
+            free_key_link.set_visibility(state["provider"] == "groq")
 
             ui.number(
                 label="Concurrency",
