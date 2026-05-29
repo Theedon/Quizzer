@@ -22,17 +22,24 @@ class TokenCounterCallback(AsyncCallbackHandler):
         self.total_tokens: int = 0
 
     async def on_llm_end(self, response: LLMResult, **kwargs: object) -> None:
-        for gen_list in response.generations:
-            for gen in gen_list:
-                msg = getattr(gen, "message", None)
-                usage = getattr(msg, "usage_metadata", None) if msg else None
-                if usage:
+        try:
+            found = False
+            for gen_list in response.generations:
+                for gen in gen_list:
+                    msg = getattr(gen, "message", None)
+                    usage = getattr(msg, "usage_metadata", None) if msg else None
+                    if isinstance(usage, dict) and usage.get("total_tokens"):
+                        self.total_tokens += usage["total_tokens"]
+                        found = True
+                        break
+                if found:
+                    break
+            if not found and response.llm_output:
+                usage = response.llm_output.get("token_usage", {})
+                if isinstance(usage, dict):
                     self.total_tokens += usage.get("total_tokens", 0)
-                    return
-        # provider-specific fallback
-        if response.llm_output:
-            usage = response.llm_output.get("token_usage", {})
-            self.total_tokens += usage.get("total_tokens", 0)
+        except Exception:
+            pass
 
 
 @dataclass
