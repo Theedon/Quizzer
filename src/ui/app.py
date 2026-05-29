@@ -421,27 +421,28 @@ def index() -> None:
                 .on_value_change(lambda e: state.update(model=e.value))
             )
 
-            api_key_input = (
-                ui.input(
-                    label=PROVIDER_KEY_LABEL.get(state["provider"], "API Key"),
-                    value=state["api_key"],
-                    password=True,
-                    password_toggle_button=True,
+            with ui.column().classes("w-full gap-1"):
+                api_key_input = (
+                    ui.input(
+                        label=PROVIDER_KEY_LABEL.get(state["provider"], "API Key"),
+                        value=state["api_key"],
+                        password=True,
+                        password_toggle_button=True,
+                    )
+                    .classes("w-full")
+                    .props("outlined dense")
+                    .on_value_change(lambda e: state.update(api_key=e.value))
                 )
-                .classes("w-full")
-                .props("outlined dense")
-                .on_value_change(lambda e: state.update(api_key=e.value))
-            )
 
-            key_links = {
-                provider: (
-                    ui.link("Get an API key →", PROVIDER_KEY_URL[provider], new_tab=True)
-                    .classes("text-xs text-primary")
-                )
-                for provider in PROVIDERS
-            }
-            for provider, link in key_links.items():
-                link.set_visibility(provider == state["provider"])
+                key_links = {
+                    provider: (
+                        ui.link("Get an API key →", PROVIDER_KEY_URL[provider], new_tab=True)
+                        .classes("text-xs text-primary")
+                    )
+                    for provider in PROVIDERS
+                }
+                for provider, link in key_links.items():
+                    link.set_visibility(provider == state["provider"])
 
             ui.number(
                 label="Concurrency",
