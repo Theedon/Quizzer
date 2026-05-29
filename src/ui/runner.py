@@ -4,6 +4,8 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable, Literal
 
+from langchain_core.callbacks import AsyncCallbackHandler
+from langchain_core.outputs import LLMResult
 from langgraph.types import StateSnapshot
 
 from ..agent.graph import graph_ainvoke
@@ -15,6 +17,31 @@ Phase = Literal[
 ]
 
 
+class TokenCounterCallback(AsyncCallbackHandler):
+    def __init__(self) -> None:
+        self.total_tokens: int = 0
+
+    async def on_llm_end(self, response: LLMResult, **kwargs: object) -> None:
+        try:
+            found = False
+            for gen_list in response.generations:
+                for gen in gen_list:
+                    msg = getattr(gen, "message", None)
+                    usage = getattr(msg, "usage_metadata", None) if msg else None
+                    if isinstance(usage, dict) and usage.get("total_tokens"):
+                        self.total_tokens += usage["total_tokens"]
+                        found = True
+                        break
+                if found:
+                    break
+            if not found and response.llm_output:
+                usage = response.llm_output.get("token_usage", {})
+                if isinstance(usage, dict):
+                    self.total_tokens += usage.get("total_tokens", 0)
+        except Exception:
+            pass
+
+
 @dataclass
 class GenerationProgress:
     phase: Phase = "idle"
@@ -23,6 +50,7 @@ class GenerationProgress:
     chunks_done: int = 0
     quizzes: list[FinalQuizItem] = field(default_factory=list)
     error: str | None = None
+    total_tokens: int = 0
 
     @property
     def fraction(self) -> float:
@@ -43,6 +71,7 @@ async def run_generation(
     concurrency: int | None = None,
     api_key: str | None = None,
 ) -> list[FinalQuizItem]:
+    token_counter = TokenCounterCallback()
     progress = GenerationProgress(phase="ingesting")
     await _emit(on_progress, progress)
 
@@ -73,6 +102,7 @@ async def run_generation(
             elif node_name == "aggregator":
                 progress.phase = "aggregating"
 
+        progress.total_tokens = token_counter.total_tokens
         await _emit(on_progress, progress)
 
         if cancel_event is not None and cancel_event.is_set():
@@ -87,6 +117,7 @@ async def run_generation(
             model_name=model_name,
             concurrency=concurrency,
             api_key=api_key,
+            callbacks=[token_counter],
         )
     except Exception as exc:
         logger.exception("Generation failed")
@@ -105,6 +136,7 @@ async def run_generation(
     final_quiz: list[FinalQuizItem] = list(state_values.get("final_quiz", []) or [])
 
     progress.quizzes = final_quiz
+    progress.total_tokens = token_counter.total_tokens
     if progress.total_chunks:
         progress.chunks_done = progress.total_chunks
     progress.phase = "done"
@@ -121,6 +153,7 @@ async def _emit(on_progress: OnProgress, progress: GenerationProgress) -> None:
         chunks_done=progress.chunks_done,
         quizzes=list(progress.quizzes),
         error=progress.error,
+        total_tokens=progress.total_tokens,
     )
     result = on_progress(snapshot)
     if result is not None:
