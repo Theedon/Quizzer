@@ -84,3 +84,4 @@ From `copilot-instructions.md` (treat these as load-bearing):
 - **Configuration**: import the `settings` singleton from `src/core/settings.py`. Do not call `dotenv.load_dotenv` or read `os.environ` ad-hoc (the one exception is `src/main.py`, which loads `.env` before importing settings).
 - **Package management**: use `uv` for everything (`uv sync`, `uv run`, `uv add`, `uv remove`). No `pip`, no bare `python`.
 - **Tests**: live in `tests/` only — never colocated under `src/`. Use `pytest`. When you add or change a class/function, check for an existing test and update it; if none exists, add one in `tests/`.
+- **GitHub titles**: issue and PR titles are natural-language descriptions, not imperative commands. Issues describe the problem ("UI is not mobile-friendly"); PRs describe the change ("Mobile-friendly UI redesign"). Imperative mood ("Fix X", "Add Y") is for git commit messages only.
