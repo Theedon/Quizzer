@@ -24,6 +24,11 @@ PROVIDER_KEY_LABEL = {
     "google": "Google API Key",
     "groq": "Groq API Key",
 }
+PROVIDER_KEY_URL = {
+    "openai": "https://platform.openai.com/api-keys",
+    "google": "https://aistudio.google.com/apikey",
+    "groq": "https://console.groq.com/keys",
+}
 
 GREEN_PRIMARY = "#16a34a"
 GREEN_DARK = "#15803d"
@@ -359,7 +364,8 @@ def index() -> None:
         api_key_input.set_value("")
         api_key_input.props(f"label='{PROVIDER_KEY_LABEL.get(e.value, 'API Key')}'")
         provider_chip.set_text(f"provider: {state['provider']}")
-        free_key_link.set_visibility(e.value == "groq")
+        for provider, link in key_links.items():
+            link.set_visibility(provider == e.value)
 
     # ============================================================
     # UI build
@@ -427,11 +433,15 @@ def index() -> None:
                 .on_value_change(lambda e: state.update(api_key=e.value))
             )
 
-            free_key_link = (
-                ui.link("Get a free API key →", "https://console.groq.com/keys", new_tab=True)
-                .classes("text-xs text-primary")
-            )
-            free_key_link.set_visibility(state["provider"] == "groq")
+            key_links = {
+                provider: (
+                    ui.link("Get an API key →", PROVIDER_KEY_URL[provider], new_tab=True)
+                    .classes("text-xs text-primary")
+                )
+                for provider in PROVIDERS
+            }
+            for provider, link in key_links.items():
+                link.set_visibility(provider == state["provider"])
 
             ui.number(
                 label="Concurrency",
