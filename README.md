@@ -4,7 +4,7 @@ An entirely asynchronous, Map-Reduce LangGraph architecture that ingests heavy t
 
 ## Try it live
 
-> **Hosted on Railway:** [quizzer-production-e21f.up.railway.app](https://quizzer-production-e21f.up.railway.app)
+> **Live at:** [quizzer.faniyantoyin.com](https://quizzer.faniyantoyin.com)
 >
 > Select your LLM provider, enter your own API key, upload a PDF, and generate quiz questions — no local setup needed.
 
@@ -93,7 +93,7 @@ uv run -m src.ui.app
 # then open http://localhost:8080
 ```
 
-> **Or skip the local setup** — try the hosted version at [quizzer-production-e21f.up.railway.app](https://quizzer-production-e21f.up.railway.app)
+> **Or skip the local setup** — try the hosted version at [quizzer.faniyantoyin.com](https://quizzer.faniyantoyin.com)
 
 ![Quizzer GUI](docs/ui_dark.png)
 
