@@ -105,10 +105,12 @@ def index() -> None:
             elif p.phase == "chunking":
                 detail = f"pages {p.total_pages}"
             else:
+                token_part = f" · tokens {p.total_tokens:,}" if p.total_tokens else ""
                 detail = (
                     f"pages {p.total_pages} · "
                     f"chunks {p.chunks_done}/{p.total_chunks or '?'} · "
                     f"questions {len(p.quizzes)}"
+                    f"{token_part}"
                 )
             ui.label(detail).classes("text-xs opacity-70")
             if p.phase == "error" and p.error:

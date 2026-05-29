@@ -297,6 +297,7 @@ async def graph_ainvoke(
     model_name: str | None = None,
     concurrency: int | None = None,
     api_key: str | None = None,
+    callbacks: list | None = None,
 ) -> GlobalQuizState | StateSnapshot:
     if thread_id is None:
         thread_id = f"qthread_{os.urandom(8).hex()}"
@@ -317,6 +318,7 @@ async def graph_ainvoke(
             "thread_id": thread_id,
         },
         "max_concurrency": concurrency or settings.GEN_CONCURRENCY,
+        "callbacks": callbacks or [],
     }
 
     logger.info("--------🚦 graph execution stream started--------")
