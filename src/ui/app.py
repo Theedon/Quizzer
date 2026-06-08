@@ -159,6 +159,43 @@ body, .q-app { font-family: var(--font-ui) !important; }
   display: flex; flex-direction: column; align-items: center;
   gap: 8px; padding: 48px 24px; text-align: center; opacity: 0.5;
 }
+
+/* ── Quiz card ──────────────────────────────── */
+.qz-q-number {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--q-primary, #16a34a); color: #fff;
+  font-size: 11px; font-weight: 800; font-family: var(--font-ui); flex-shrink: 0;
+}
+.qz-page-chip {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; font-family: var(--font-ui);
+}
+.body--dark .qz-page-chip  { background: oklch(28% 0.010 142); color: oklch(62% 0.010 142); }
+.body--light .qz-page-chip { background: oklch(88% 0.012 142); color: oklch(40% 0.010 142); }
+
+.qz-options-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; font-family: var(--font-ui); margin-bottom: 2px;
+}
+.body--dark .qz-options-label  { color: oklch(52% 0.008 142); }
+.body--light .qz-options-label { color: oklch(45% 0.008 142); }
+
+.qz-option-letter {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 7px;
+  font-size: 11px; font-weight: 700; font-family: var(--font-ui); flex-shrink: 0;
+}
+.body--dark .qz-option-letter  { background: oklch(27% 0.010 142); color: oklch(62% 0.010 142); }
+.body--light .qz-option-letter { background: oklch(89% 0.012 142); color: oklch(38% 0.010 142); }
+
+.qz-answer-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; font-family: var(--font-ui);
+}
+.body--dark .qz-answer-label  { color: oklch(52% 0.008 142); }
+.body--light .qz-answer-label { color: oklch(45% 0.008 142); }
 </style>
 """
 
@@ -270,7 +307,9 @@ def index() -> None:
     def cards_view() -> None:
         quizzes: list[dict] = state["quizzes"]
         with ui.row().classes("w-full items-center justify-between"):
-            ui.html(f'<div class="qz-step-row" style="margin-bottom:0"><span class="qz-step-badge">3</span><span class="qz-step-label">Review &amp; Download ({len(quizzes)})</span></div>')
+            ui.html(
+                f'<div class="qz-step-row" style="margin-bottom:0"><span class="qz-step-badge">3</span><span class="qz-step-label">Review &amp; Download ({len(quizzes)})</span></div>'
+            )
             download_btn = ui.button(
                 "Download CSV",
                 icon="download",
@@ -283,7 +322,9 @@ def index() -> None:
             with ui.column().classes("qz-empty w-full"):
                 ui.icon("auto_stories").classes("text-5xl")
                 ui.label("No questions yet").classes("text-sm font-semibold")
-                ui.label("Upload a PDF and hit Generate to get started.").classes("text-xs")
+                ui.label("Upload a PDF and hit Generate to get started.").classes(
+                    "text-xs"
+                )
             return
 
         page = state["page"]
@@ -299,7 +340,10 @@ def index() -> None:
             with ui.row().classes("w-full items-center justify-center gap-4 mt-2"):
                 ui.button(
                     icon="chevron_left",
-                    on_click=lambda: (state.update(page=state["page"] - 1), cards_view.refresh()),
+                    on_click=lambda: (
+                        state.update(page=state["page"] - 1),
+                        cards_view.refresh(),
+                    ),
                 ).props("flat dense round color=primary").bind_enabled_from(
                     state, "page", backward=lambda p: p > 0
                 )
@@ -308,59 +352,83 @@ def index() -> None:
                 )
                 ui.button(
                     icon="chevron_right",
-                    on_click=lambda: (state.update(page=state["page"] + 1), cards_view.refresh()),
+                    on_click=lambda: (
+                        state.update(page=state["page"] + 1),
+                        cards_view.refresh(),
+                    ),
                 ).props("flat dense round color=primary").bind_enabled_from(
                     state, "page", backward=lambda p: p < total_pages - 1
                 )
 
     def _quiz_card(idx: int, quiz: dict) -> None:
-        with ui.card().classes("w-full p-4 gap-2"):
-            with ui.row().classes("w-full items-center justify-between"):
-                ui.label(f"Q{idx + 1}").classes(
-                    "text-xs font-semibold text-primary"
-                )
+        with ui.card().classes("w-full p-0"):
+            # ── Header ──────────────────────────────
+            with ui.row().classes("w-full items-center justify-between px-4 pt-3 pb-2"):
                 with ui.row().classes("items-center gap-2"):
-                    ui.label(f"page {quiz.get('page_number', '?')}").classes(
-                        "text-xs opacity-60"
+                    ui.html(f'<span class="qz-q-number">{idx + 1}</span>')
+                    ui.html(
+                        f'<span class="qz-page-chip">page {quiz.get("page_number", "?")}</span>'
                     )
-                    ui.button(
-                        icon="delete",
-                        on_click=lambda _e, i=idx: delete_quiz(i),
-                    ).props("flat dense round color=negative").tooltip(
-                        "Remove this question"
-                    )
+                ui.button(
+                    icon="delete",
+                    on_click=lambda *_, i=idx: delete_quiz(i),
+                ).props("flat dense round color=negative").tooltip(
+                    "Remove this question"
+                )
+            ui.separator().style("margin: 0; opacity: 0.15")
 
-            ui.input(
-                label="Question",
-                value=quiz.get("question", ""),
-            ).classes("w-full qz-question").props("outlined dense").on_value_change(
-                lambda e, q=quiz: q.update(question=e.value)
-            )
-
-            with ui.row().classes("w-full flex-wrap gap-2"):
-                for letter in ("a", "b", "c", "d"):
-                    ui.input(
-                        label=f"Option {letter.upper()}",
-                        value=quiz.get(f"option_{letter}", ""),
-                    ).style("flex: 1 1 10rem").props("outlined dense").on_value_change(
-                        lambda e, q=quiz, k=f"option_{letter}": q.update({k: e.value})
-                    )
-
-            with ui.row().classes("w-full items-center gap-3"):
-                ui.label("Correct").classes("text-xs opacity-70")
-                ui.radio(
-                    ["A", "B", "C", "D"],
-                    value=quiz.get("answer", "A"),
-                ).props("inline dense color=primary").on_value_change(
-                    lambda e, q=quiz: q.update(answer=e.value)
+            # ── Question + Options + Answer ──────────
+            with ui.column().classes("w-full gap-3 px-4 pt-3 pb-3"):
+                ui.input(
+                    label="Question",
+                    value=quiz.get("question", ""),
+                ).classes(
+                    "w-full qz-question"
+                ).props("outlined dense").on_value_change(
+                    lambda e, q=quiz: q.update(question=e.value)
                 )
 
-            ui.textarea(
-                label="Explanation",
-                value=quiz.get("explanation", ""),
-            ).classes("w-full").props("outlined dense autogrow").on_value_change(
-                lambda e, q=quiz: q.update(explanation=e.value)
-            )
+                ui.html('<div class="qz-options-label">Options</div>')
+                for letter in ("a", "b", "c", "d"):
+                    with ui.row().classes("items-center gap-2 w-full"):
+                        ui.html(
+                            f'<span class="qz-option-letter">{letter.upper()}</span>'
+                        )
+                        ui.input(
+                            value=quiz.get(f"option_{letter}", ""),
+                        ).classes(
+                            "flex-1"
+                        ).props("outlined dense").on_value_change(
+                            lambda e, q=quiz, k=f"option_{letter}": q.update(
+                                {k: e.value}
+                            )
+                        )
+
+                ui.separator().style("margin: 2px 0; opacity: 0.10")
+                with ui.row().classes("items-center gap-3 flex-wrap"):
+                    ui.html('<span class="qz-answer-label">Correct answer</span>')
+                    ui.radio(
+                        ["A", "B", "C", "D"],
+                        value=quiz.get("answer", "A"),
+                    ).props("inline dense color=primary").on_value_change(
+                        lambda e, q=quiz: q.update(answer=e.value)
+                    )
+
+            # ── Explanation (collapsible) ────────────
+            ui.separator().style("margin: 0; opacity: 0.10")
+            with (
+                ui.expansion("Explanation", icon="lightbulb_outline")
+                .classes("w-full")
+                .props("dense")
+            ):
+                with ui.column().classes("px-4 pb-3 pt-1 w-full"):
+                    ui.textarea(
+                        value=quiz.get("explanation", ""),
+                    ).classes(
+                        "w-full"
+                    ).props("outlined dense autogrow").on_value_change(
+                        lambda e, q=quiz: q.update(explanation=e.value)
+                    )
 
     # ============================================================
     # Handlers
@@ -462,9 +530,7 @@ def index() -> None:
 
     def reset_all() -> None:
         if state["running"]:
-            ui.notify(
-                "Generation in progress — wait for it to finish", type="warning"
-            )
+            ui.notify("Generation in progress — wait for it to finish", type="warning")
             return
         if state["pdf_path"]:
             Path(state["pdf_path"]).unlink(missing_ok=True)
@@ -536,9 +602,7 @@ def index() -> None:
 
             def toggle_dark() -> None:
                 dark.toggle()
-                dark_btn.props(
-                    f"icon={'light_mode' if dark.value else 'dark_mode'}"
-                )
+                dark_btn.props(f"icon={'light_mode' if dark.value else 'dark_mode'}")
 
             dark_btn = (
                 ui.button(icon="light_mode", on_click=toggle_dark)
@@ -582,8 +646,9 @@ def index() -> None:
 
                 key_links = {
                     provider: (
-                        ui.link("Get an API key →", PROVIDER_KEY_URL[provider], new_tab=True)
-                        .classes("text-xs text-primary")
+                        ui.link(
+                            "Get an API key →", PROVIDER_KEY_URL[provider], new_tab=True
+                        ).classes("text-xs text-primary")
                     )
                     for provider in PROVIDERS
                 }
@@ -610,16 +675,16 @@ def index() -> None:
 
         # --- upload ---
         with ui.card().classes("w-full p-4"):
-            ui.html('<div class="qz-step-row"><span class="qz-step-badge">1</span><span class="qz-step-label">Upload PDF</span></div>')
+            ui.html(
+                '<div class="qz-step-row"><span class="qz-step-badge">1</span><span class="qz-step-label">Upload PDF</span></div>'
+            )
             ui.upload(
                 label="Drop your PDF here, or click to browse",
                 auto_upload=True,
                 multiple=False,
                 on_upload=on_upload,
             ).props('accept=".pdf" color=primary').classes("w-full")
-            upload_status = ui.label("No file selected").classes(
-                "text-xs opacity-50"
-            )
+            upload_status = ui.label("No file selected").classes("text-xs opacity-50")
 
         # --- generate / reset / cancel ---
         @ui.refreshable
@@ -638,7 +703,9 @@ def index() -> None:
                         on_click=reset_all,
                     ).props("flat color=primary")
 
-        ui.html('<div class="qz-step-row" style="margin-top:4px"><span class="qz-step-badge">2</span><span class="qz-step-label">Generate</span></div>')
+        ui.html(
+            '<div class="qz-step-row" style="margin-top:4px"><span class="qz-step-badge">2</span><span class="qz-step-label">Generate</span></div>'
+        )
         generate_btn = ui.button(
             "Generate Quiz",
             icon="play_arrow",
