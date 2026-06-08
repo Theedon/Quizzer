@@ -13,3 +13,4 @@ logs/
 .env.test
 temp/
 .claude/
+.hallmark/

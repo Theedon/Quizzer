@@ -34,6 +34,134 @@ GREEN_PRIMARY = "#16a34a"
 GREEN_DARK = "#15803d"
 GREEN_ACCENT = "#22c55e"
 
+# Hallmark · genre: playful · macrostructure: Narrative Workflow · theme: Plume
+# contrast: pass · nav: app-header · footer: none (tool UI)
+HEAD_CSS = """
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --font-ui: 'Outfit', system-ui, sans-serif;
+  --radius-card: 14px;
+  --radius-input: 8px;
+  --radius-btn:  8px;
+  --dur-hover: 160ms;
+  --ease-out: cubic-bezier(0.0, 0.0, 0.2, 1.0);
+}
+.body--dark {
+  --color-paper:   oklch(14% 0.008 142);
+  --color-paper-2: oklch(19% 0.010 142);
+  --color-paper-3: oklch(24% 0.010 142);
+  --color-rule:    oklch(30% 0.008 142);
+  --color-muted:   oklch(55% 0.008 142);
+  --color-ink:     oklch(94% 0.005 100);
+  --color-shadow:  oklch(0% 0 0 / 0.45);
+}
+.body--light {
+  --color-paper:   oklch(97% 0.008 142);
+  --color-paper-2: oklch(93% 0.010 142);
+  --color-paper-3: oklch(89% 0.012 142);
+  --color-rule:    oklch(82% 0.008 142);
+  --color-muted:   oklch(48% 0.008 142);
+  --color-ink:     oklch(18% 0.010 142);
+  --color-shadow:  oklch(0% 0 0 / 0.10);
+}
+
+/* ── Base ──────────────────────────────────── */
+body, .q-app { font-family: var(--font-ui) !important; }
+
+/* ── Page background ───────────────────────── */
+.body--dark .q-page-container,
+.body--dark .q-page { background: var(--color-paper) !important; }
+.body--light .q-page-container,
+.body--light .q-page { background: var(--color-paper) !important; }
+
+/* ── Cards ─────────────────────────────────── */
+.q-card {
+  border-radius: var(--radius-card) !important;
+  background: var(--color-paper-2) !important;
+  box-shadow: 0 2px 12px -2px var(--color-shadow),
+              0 0 0 1px oklch(100% 0 0 / 0.06) !important;
+  transition: box-shadow var(--dur-hover) var(--ease-out),
+              transform var(--dur-hover) var(--ease-out) !important;
+}
+.q-card:hover {
+  box-shadow: 0 6px 24px -4px var(--color-shadow),
+              0 0 0 1px oklch(100% 0 0 / 0.09) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ── Header ─────────────────────────────────── */
+.body--dark .q-header {
+  background: linear-gradient(120deg,
+    oklch(30% 0.17 142), oklch(24% 0.12 160)) !important;
+  border-bottom: 1px solid oklch(100% 0 0 / 0.08) !important;
+  box-shadow: none !important;
+}
+.body--light .q-header {
+  background: linear-gradient(120deg,
+    oklch(48% 0.17 142), oklch(40% 0.14 160)) !important;
+  border-bottom: 1px solid oklch(0% 0 0 / 0.12) !important;
+  box-shadow: none !important;
+}
+
+/* ── Drawer ─────────────────────────────────── */
+.body--dark .q-drawer {
+  background: oklch(16% 0.009 142) !important;
+  border-right: 1px solid var(--color-rule) !important;
+}
+.body--light .q-drawer {
+  background: var(--color-paper-2) !important;
+  border-right: 1px solid var(--color-rule) !important;
+}
+
+/* ── Inputs ─────────────────────────────────── */
+.q-field--outlined .q-field__control {
+  border-radius: var(--radius-input) !important;
+}
+
+/* ── Buttons ────────────────────────────────── */
+.q-btn:not(.q-btn--round) {
+  border-radius: var(--radius-btn) !important;
+  font-family: var(--font-ui) !important;
+  font-weight: 600 !important;
+}
+
+/* ── Progress bar ───────────────────────────── */
+.q-linear-progress { height: 6px !important; border-radius: 999px !important; overflow: hidden !important; }
+.q-linear-progress__track, .q-linear-progress__model { border-radius: 999px !important; }
+
+/* ── Upload zone ────────────────────────────── */
+.q-uploader { border-radius: var(--radius-card) !important; }
+.q-uploader__header { border-radius: var(--radius-card) var(--radius-card) 0 0 !important; }
+
+/* ── Step badge ─────────────────────────────── */
+.qz-step-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.qz-step-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--q-primary, #16a34a); color: #fff;
+  font-size: 11px; font-weight: 800; font-family: var(--font-ui);
+  flex-shrink: 0; line-height: 1;
+}
+.qz-step-label {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.07em; text-transform: uppercase; opacity: 0.65;
+}
+
+/* ── Quiz question prominence ───────────────── */
+.qz-question .q-field__native,
+.qz-question .q-field__input { font-size: 14px !important; font-weight: 600 !important; line-height: 1.55 !important; }
+
+/* ── Empty state ────────────────────────────── */
+.qz-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; padding: 48px 24px; text-align: center; opacity: 0.5;
+}
+</style>
+"""
+
 
 def is_valid_pdf(content: IO[bytes]) -> bool:
     """Check if file content starts with the PDF magic bytes."""
@@ -47,16 +175,28 @@ def _model_for(provider: str) -> str:
     return getattr(settings, field, "") if field else ""
 
 
+_PHASE_ICON = {
+    "idle": "radio_button_unchecked",
+    "ingesting": "picture_as_pdf",
+    "chunking": "segment",
+    "generating": "auto_awesome",
+    "aggregating": "check_circle_outline",
+    "done": "check_circle",
+    "error": "error_outline",
+}
+_PHASE_TEXT = {
+    "idle": "Ready",
+    "ingesting": "Reading PDF…",
+    "chunking": "Splitting into chunks…",
+    "generating": "Generating quiz…",
+    "aggregating": "Finalizing…",
+    "done": "Done",
+    "error": "Generation failed",
+}
+
+
 def _phase_label(p: GenerationProgress) -> str:
-    return {
-        "idle": "Ready",
-        "ingesting": "Reading PDF…",
-        "chunking": "Splitting into chunks…",
-        "generating": "Generating quiz…",
-        "aggregating": "Finalizing…",
-        "done": "Done",
-        "error": "Failed",
-    }.get(p.phase, "Ready")
+    return _PHASE_TEXT.get(p.phase, "Ready")
 
 
 @ui.page("/")
@@ -67,7 +207,8 @@ def index() -> None:
         accent=GREEN_ACCENT,
         positive=GREEN_PRIMARY,
     )
-    dark = ui.dark_mode(value=True)
+    dark = ui.dark_mode(value=False)
+    ui.add_head_html(HEAD_CSS)
 
     state: dict[str, Any] = {
         "pdf_path": None,
@@ -92,7 +233,11 @@ def index() -> None:
     def progress_view() -> None:
         p: GenerationProgress = state["progress"]
         with ui.card().classes("w-full p-4"):
-            ui.label(_phase_label(p)).classes("text-sm font-semibold text-primary")
+            with ui.row().classes("items-center gap-2"):
+                ui.icon(_PHASE_ICON.get(p.phase, "radio_button_unchecked")).classes(
+                    "text-base text-primary"
+                )
+                ui.label(_phase_label(p)).classes("text-sm font-semibold text-primary")
 
             if p.phase in ("ingesting", "chunking"):
                 ui.linear_progress(show_value=False).props(
@@ -125,9 +270,7 @@ def index() -> None:
     def cards_view() -> None:
         quizzes: list[dict] = state["quizzes"]
         with ui.row().classes("w-full items-center justify-between"):
-            ui.label(f"Generated questions ({len(quizzes)})").classes(
-                "text-sm font-semibold text-primary"
-            )
+            ui.html(f'<div class="qz-step-row" style="margin-bottom:0"><span class="qz-step-badge">3</span><span class="qz-step-label">Review &amp; Download ({len(quizzes)})</span></div>')
             download_btn = ui.button(
                 "Download CSV",
                 icon="download",
@@ -137,9 +280,10 @@ def index() -> None:
                 download_btn.disable()
 
         if not quizzes:
-            ui.label(
-                "Upload a PDF and click Generate to see questions here."
-            ).classes("text-xs opacity-60")
+            with ui.column().classes("qz-empty w-full"):
+                ui.icon("auto_stories").classes("text-5xl")
+                ui.label("No questions yet").classes("text-sm font-semibold")
+                ui.label("Upload a PDF and hit Generate to get started.").classes("text-xs")
             return
 
         page = state["page"]
@@ -189,7 +333,7 @@ def index() -> None:
             ui.input(
                 label="Question",
                 value=quiz.get("question", ""),
-            ).classes("w-full").props("outlined dense").on_value_change(
+            ).classes("w-full qz-question").props("outlined dense").on_value_change(
                 lambda e, q=quiz: q.update(question=e.value)
             )
 
@@ -466,11 +610,9 @@ def index() -> None:
 
         # --- upload ---
         with ui.card().classes("w-full p-4"):
-            ui.label("1. Upload PDF").classes(
-                "text-sm font-semibold text-primary"
-            )
+            ui.html('<div class="qz-step-row"><span class="qz-step-badge">1</span><span class="qz-step-label">Upload PDF</span></div>')
             ui.upload(
-                label="Drop a PDF here or click to browse",
+                label="Drop your PDF here, or click to browse",
                 auto_upload=True,
                 multiple=False,
                 on_upload=on_upload,
@@ -496,6 +638,7 @@ def index() -> None:
                         on_click=reset_all,
                     ).props("flat color=primary")
 
+        ui.html('<div class="qz-step-row" style="margin-top:4px"><span class="qz-step-badge">2</span><span class="qz-step-label">Generate</span></div>')
         generate_btn = ui.button(
             "Generate Quiz",
             icon="play_arrow",
@@ -519,7 +662,7 @@ def main() -> None:
         title="Quizzer",
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 8080)),
-        dark=True,
+        dark=False,
         reload=False,
         show=False,
         favicon="🎓",
