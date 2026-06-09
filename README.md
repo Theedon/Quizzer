@@ -86,7 +86,7 @@ OPENAI_API_KEY=sk-*** uvx https://github.com/Theedon/Quizzer.git --input docs/sa
 
 ### 4. Or run the GUI
 
-A small, async NiceGUI frontend that exposes the same pipeline: drop a PDF, watch live progress, edit the generated questions inline, and download the CSV. Dark mode is on by default with a one-click toggle, and the LLM provider/model can be switched from the sidebar.
+A small, async NiceGUI frontend that exposes the same pipeline: drop a PDF, watch live progress, edit the generated questions inline, and download the CSV. Light mode by default with a one-click dark mode toggle, and the LLM provider/model can be switched from the sidebar.
 
 ```bash
 uv run -m src.ui.app
@@ -94,8 +94,6 @@ uv run -m src.ui.app
 ```
 
 > **Or skip the local setup** — try the hosted version at [quizzer.faniyantoyin.com](https://quizzer.faniyantoyin.com)
-
-![Quizzer GUI](docs/ui_dark.png)
 
 ## Project Structure
 
