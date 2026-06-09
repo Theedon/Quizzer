@@ -6,6 +6,7 @@ import os
 import tempfile
 from pathlib import Path
 from typing import IO, Any
+from uuid import uuid4
 
 from nicegui import app, events, ui
 
@@ -434,12 +435,12 @@ def index() -> None:
                             lambda e, q=quiz: q.update(answer=e.value)
                         )
 
-            if state["quiz_mode"] and idx not in state["revealed"]:
+            if state["quiz_mode"] and quiz.get("_id") not in state["revealed"]:
                 # ── Quiz mode: hide answer + explanation ──
                 ui.separator().style("margin: 0; opacity: 0.10")
                 with ui.row().classes("px-4 py-3 w-full justify-center"):
-                    def _reveal(i: int = idx) -> None:
-                        state["revealed"].add(i)
+                    def _reveal(qid: str = quiz["_id"]) -> None:
+                        state["revealed"].add(qid)
                         cards_view.refresh()
                     ui.button("Reveal answer", icon="visibility", on_click=_reveal).props(
                         "flat color=primary dense"
@@ -500,7 +501,7 @@ def index() -> None:
         def push(snapshot: GenerationProgress) -> None:
             state["progress"] = snapshot
             if snapshot.phase in ("done", "error"):
-                state["quizzes"] = [dict(q) for q in snapshot.quizzes]
+                state["quizzes"] = [{**dict(q), "_id": uuid4().hex} for q in snapshot.quizzes]
             progress_view.refresh()
 
         try:
