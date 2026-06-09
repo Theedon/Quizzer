@@ -244,7 +244,7 @@ def index() -> None:
         accent=GREEN_ACCENT,
         positive=GREEN_PRIMARY,
     )
-    dark = ui.dark_mode(value=False)
+    dark = ui.dark_mode(value=app.storage.user.get("dark_mode", False))
     ui.add_head_html(HEAD_CSS)
 
     state: dict[str, Any] = {
@@ -423,15 +423,16 @@ def index() -> None:
                             )
                         )
 
-                ui.separator().style("margin: 2px 0; opacity: 0.10")
-                with ui.row().classes("items-center gap-3 flex-wrap"):
-                    ui.html('<span class="qz-answer-label">Correct answer</span>')
-                    ui.radio(
-                        ["A", "B", "C", "D"],
-                        value=quiz.get("answer", "A"),
-                    ).props("inline dense color=primary").on_value_change(
-                        lambda e, q=quiz: q.update(answer=e.value)
-                    )
+                if not state["quiz_mode"] or idx in state["revealed"]:
+                    ui.separator().style("margin: 2px 0; opacity: 0.10")
+                    with ui.row().classes("items-center gap-3 flex-wrap"):
+                        ui.html('<span class="qz-answer-label">Correct answer</span>')
+                        ui.radio(
+                            ["A", "B", "C", "D"],
+                            value=quiz.get("answer", "A"),
+                        ).props("inline dense color=primary").on_value_change(
+                            lambda e, q=quiz: q.update(answer=e.value)
+                        )
 
             if state["quiz_mode"] and idx not in state["revealed"]:
                 # ── Quiz mode: hide answer + explanation ──
@@ -634,6 +635,7 @@ def index() -> None:
 
             def toggle_dark() -> None:
                 dark.toggle()
+                app.storage.user["dark_mode"] = dark.value
                 dark_btn.props(f"icon={'light_mode' if dark.value else 'dark_mode'}")
 
             dark_btn = (
@@ -767,6 +769,7 @@ def main() -> None:
         reload=False,
         show=False,
         favicon="🎓",
+        storage_secret=os.environ.get("STORAGE_SECRET", "quizzer-ui-local"),
     )
 
 
