@@ -14,3 +14,4 @@ logs/
 temp/
 .claude/
 .hallmark/
+.nicegui/
