@@ -260,6 +260,8 @@ def index() -> None:
         "page": 0,
         "page_size": 10,
         "cancel_event": None,
+        "quiz_mode": False,
+        "revealed": set(),
     }
 
     # ============================================================
@@ -269,6 +271,8 @@ def index() -> None:
     @ui.refreshable
     def progress_view() -> None:
         p: GenerationProgress = state["progress"]
+        if p.phase == "idle":
+            return
         with ui.card().classes("w-full p-4"):
             with ui.row().classes("items-center gap-2"):
                 ui.icon(_PHASE_ICON.get(p.phase, "radio_button_unchecked")).classes(
@@ -306,17 +310,32 @@ def index() -> None:
     @ui.refreshable
     def cards_view() -> None:
         quizzes: list[dict] = state["quizzes"]
+
+        def toggle_quiz_mode() -> None:
+            state["quiz_mode"] = not state["quiz_mode"]
+            if not state["quiz_mode"]:
+                state["revealed"] = set()
+            cards_view.refresh()
+
         with ui.row().classes("w-full items-center justify-between"):
             ui.html(
                 f'<div class="qz-step-row" style="margin-bottom:0"><span class="qz-step-badge">3</span><span class="qz-step-label">Review &amp; Download ({len(quizzes)})</span></div>'
             )
-            download_btn = ui.button(
-                "Download CSV",
-                icon="download",
-                on_click=on_download,
-            ).props("color=primary unelevated")
-            if not quizzes:
-                download_btn.disable()
+            with ui.row().classes("items-center gap-2"):
+                quiz_mode_btn = ui.button(
+                    "Exit Quiz Mode" if state["quiz_mode"] else "Quiz Mode",
+                    icon="edit_note" if state["quiz_mode"] else "school",
+                    on_click=toggle_quiz_mode,
+                ).props("flat color=primary")
+                if not quizzes:
+                    quiz_mode_btn.disable()
+                download_btn = ui.button(
+                    "Download CSV",
+                    icon="download",
+                    on_click=on_download,
+                ).props("color=primary unelevated")
+                if not quizzes:
+                    download_btn.disable()
 
         if not quizzes:
             with ui.column().classes("qz-empty w-full"):
@@ -414,21 +433,32 @@ def index() -> None:
                         lambda e, q=quiz: q.update(answer=e.value)
                     )
 
-            # ── Explanation (collapsible) ────────────
-            ui.separator().style("margin: 0; opacity: 0.10")
-            with (
-                ui.expansion("Explanation", icon="lightbulb_outline")
-                .classes("w-full")
-                .props("dense")
-            ):
-                with ui.column().classes("px-4 pb-3 pt-1 w-full"):
-                    ui.textarea(
-                        value=quiz.get("explanation", ""),
-                    ).classes(
-                        "w-full"
-                    ).props("outlined dense autogrow").on_value_change(
-                        lambda e, q=quiz: q.update(explanation=e.value)
+            if state["quiz_mode"] and idx not in state["revealed"]:
+                # ── Quiz mode: hide answer + explanation ──
+                ui.separator().style("margin: 0; opacity: 0.10")
+                with ui.row().classes("px-4 py-3 w-full justify-center"):
+                    def _reveal(i: int = idx) -> None:
+                        state["revealed"].add(i)
+                        cards_view.refresh()
+                    ui.button("Reveal answer", icon="visibility", on_click=_reveal).props(
+                        "flat color=primary dense"
                     )
+            else:
+                # ── Explanation (collapsible) ────────────
+                ui.separator().style("margin: 0; opacity: 0.10")
+                with (
+                    ui.expansion("Explanation", icon="lightbulb_outline")
+                    .classes("w-full")
+                    .props("dense")
+                ):
+                    with ui.column().classes("px-4 pb-3 pt-1 w-full"):
+                        ui.textarea(
+                            value=quiz.get("explanation", ""),
+                        ).classes(
+                            "w-full"
+                        ).props("outlined dense autogrow").on_value_change(
+                            lambda e, q=quiz: q.update(explanation=e.value)
+                        )
 
     # ============================================================
     # Handlers
@@ -454,6 +484,8 @@ def index() -> None:
 
         provider_chip.set_text(f"provider: {state['provider']}")
 
+        state["quiz_mode"] = False
+        state["revealed"] = set()
         state["running"] = True
         state["quizzes"] = []
         state["page"] = 0
