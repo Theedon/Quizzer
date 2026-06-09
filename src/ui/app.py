@@ -755,6 +755,8 @@ def index() -> None:
 
 
 def main() -> None:
+    from dotenv import load_dotenv
+    load_dotenv()
     configure_logging()
     app.on_startup(lambda: logger.info("Quizzer UI started"))
     ui.run(
